@@ -5,3 +5,10 @@ plotly
 pymongo
 python-dotenv
 pydeck
+streamlit
+pydub
+numpy
+scipy
+matplotlib
+pandas
+requests
