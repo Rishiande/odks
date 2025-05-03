@@ -4,10 +4,7 @@ import streamlit as st
 import pandas as pd
 import io
 import zipfile
-import time
 from datetime import datetime
-import tempfile
-from pydub import AudioSegment
 
 # Streamlit Setup
 st.set_page_config(page_title="ODK Audio Test Downloader", layout="centered")
@@ -295,23 +292,10 @@ def filter_submissions_by_date(submissions, selected_date):
         return [submission for submission in submissions if submission['__system']['submissionDate'].startswith(selected_date_str)]
     return submissions
 
-#def get_audio_duration(audio_content):
-    #"""Calculate duration of audio file in seconds"""
-    #try:
-        #with tempfile.NamedTemporaryFile(delete=True) as tmp_file:
-            #tmp_file.write(audio_content)
-            #tmp_file.flush()
-            #audio = AudioSegment.from_file(tmp_file.name)
-            #return len(audio) / 1000  # Convert milliseconds to seconds
-    #except Exception as e:
-        #st.warning(f"Could not calculate duration: {str(e)}")
-        #return None
-
 def download_audio_files(selected_server, form_name, project_id, form_id, audio_submissions):
     config = ODK_CONFIGS[selected_server]
     zip_buffer = io.BytesIO()
     download_status = []
-    duration_data = []
 
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for i, (_, row) in enumerate(audio_submissions.iterrows()):
@@ -329,42 +313,21 @@ def download_audio_files(selected_server, form_name, project_id, form_id, audio_
                     )
                     audio_response.raise_for_status()
 
-                    # Calculate duration
-                    duration_seconds = get_audio_duration(audio_response.content)
-                    duration_str = f"{duration_seconds:.2f}s" if duration_seconds else "N/A"
-
                     clean_name = f"{submitted_by}_{audio_file}".replace(" ", "_").replace("/", "_").replace("\\", "_")
                     zip_file.writestr(clean_name, audio_response.content)
 
-                    # Store duration information
-                    duration_data.append({
-                        "File Name": clean_name,
-                        "Duration (s)": duration_seconds if duration_seconds else "N/A",
-                        "Status": "✅ Downloaded"
-                    })
-
-                    download_status.append(f"✅ Downloaded: {clean_name} ({duration_str})")
+                    download_status.append(f"✅ Downloaded: {clean_name}")
 
                 except requests.exceptions.RequestException as e:
                     download_status.append(f"❌ Server error for {audio_file}: {str(e)}")
-                    duration_data.append({
-                        "File Name": f"{submitted_by}_{audio_file}",
-                        "Duration (s)": "N/A",
-                        "Status": f"❌ Error: {str(e)}"
-                    })
                 except Exception as e:
                     download_status.append(f"❌ Unexpected error for {audio_file}: {str(e)}")
-                    duration_data.append({
-                        "File Name": f"{submitted_by}_{audio_file}",
-                        "Duration (s)": "N/A",
-                        "Status": f"❌ Error: {str(e)}"
-                    })
 
     if zip_buffer.getbuffer().nbytes == 0:
-        return None, download_status, duration_data
+        return None, download_status
 
     zip_buffer.seek(0)  # Reset buffer position
-    return zip_buffer, download_status, duration_data
+    return zip_buffer, download_status
 
 def main():
     try:
@@ -408,7 +371,7 @@ def main():
 
                                 # Test download section
                                 if st.button(f"🚀 Download All Audio Files from {form_name}"):
-                                    zip_buffer, download_status, duration_data = download_audio_files(
+                                    zip_buffer, download_status = download_audio_files(
                                         selected_server, form_name, project_id, form_id, audio_submissions
                                     )
 
@@ -422,11 +385,6 @@ def main():
                                             file_name=f"{form_name.replace(' ', '_')}_AUDIOS_{datetime.now().strftime('%Y%m%d')}.zip",
                                             mime="application/zip"
                                         )
-
-                                    # Display duration information in a table
-                                    st.subheader("Audio File Details")
-                                    duration_df = pd.DataFrame(duration_data)
-                                    st.dataframe(duration_df)
 
                                     # Display download status messages
                                     st.subheader("Download Status")
