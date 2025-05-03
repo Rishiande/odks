@@ -6,6 +6,8 @@ import io
 import zipfile
 import time
 from datetime import datetime
+import tempfile
+from pydub import AudioSegment
 
 # Streamlit Setup
 st.set_page_config(page_title="ODK Audio Test Downloader", layout="centered")
@@ -22,10 +24,15 @@ ODK_CONFIGS = {
         "ODK_USERNAME": "rushi@tnodk01.ii.com",
         "ODK_PASSWORD": "rushi2025&",
         "BASE_URL": "https://tnodk02.indiaintentions.com"
+    },
+    "Server 3": {
+        "ODK_USERNAME": "rushi@tnodk01.ii.com",
+        "ODK_PASSWORD": "rushi2025&",
+        "BASE_URL": "https://tnodk03.indiaintentions.com"
     }
 }
 
-# Form mappings (truncated for brevity - include your full form mappings here)
+# Form mappings
 forms = {
     "Server 1": {
         "TN Master": {
@@ -175,6 +182,98 @@ forms = {
             "194-Madurai West": {"project_id":7,"form_id":"194-Madurai West Landscape Survey 04-2025"},
             "195-Thiruparankundram" : {"project_id":7,"form_id":"195-Thiruparankundram Landscape Survey 04-2025"},
             "196-Thirumangalam" : {"project_id":7,"form_id":"196-Thirumangalam Landscape Survey 04-2025"}
+        },
+        "01 Shankar Subramaniam TN Landscape Survey" : {
+            "142-Thiruverumbur" : {"project_id":10,"form_id":"142-Thiruverumbur Landscape Survey 04-2025"},
+            "108-Udhagamandalam" : {"project_id":10,"form_id":"108-Udhagamandalam Landscape Survey 04-2025"},
+            "28-Alandur" : {"project_id":10,"form_id":"28-Alandur Landscape Survey 04-2025"},
+            "166-Thiruthuraipoondi (SC)" : {"project_id":10,"form_id":"166-Thiruthuraipoondi (SC) Landscape Survey 04-2025"},
+            "144-Manachanallur" : {"project_id":10,"form_id":"144-Manachanallur Landscape Survey 04-2025"},
+            "161-Mayiladuthurai" : {"project_id":10,"form_id":"161-Mayiladuthurai Landscape Survey 04-2025"},
+            "170-Thiruvidaimarudur (SC)" : {"project_id":10,"form_id":"170-Thiruvidaimarudur (SC) Landscape Survey 04-2025"},
+            "210-Tiruvadanai" : {"project_id":10,"form_id":"210-Tiruvadanai Landscape Survey 04-2025"},
+            "214-Thoothukkudi" : {"project_id":10,"form_id":"214-Thoothukkudi Landscape Survey 04-2025"},
+            "219-Sankarankovil (SC) " : {"project_id":10,"form_id":"219-Sankarankovil (SC) Landscape Survey 04-2025"},
+            "224-Tirunelveli" : {"project_id":10,"form_id":"224-Tirunelveli Landscape Survey 04-2025"},
+            "226-Palayamkottai" : {"project_id":10,"form_id":"226-Palayamkottai Landscape Survey 04-2025"},
+            "54-Veppanahalli" : {"project_id":10,"form_id":"54-Veppanahalli Landscape Survey 04-2025"},
+            "94-Namakkal" : {"project_id":10,"form_id":"94-Namakkal Landscape Survey 04-2025"}
+        }
+    },
+    "Server 3": {
+        "01 Laxmi Narayana TN Landscape": {
+            "127-Palani Landscape Survey 04-2025": {"project_id": 5, "form_id": "127-Palani Landscape Survey 04-2025"},
+            "148-Kunnam Landscape Survey 04-2025": {"project_id": 5, "form_id": "148-Kunnam Landscape Survey 04-2025"},
+            "78-Rishivandiyam Landscape Survey 04-2025 copy 42": {"project_id": 5, "form_id": "78-Rishivandiyam Landscape Survey 04-2025 copy 42"},
+            "80-Kallakurichi (SC) Landscape Survey 04-2025": {"project_id": 5, "form_id": "80-Kallakurichi (SC) Landscape Survey 04-2025"}
+        },
+        "01 Bhaskar Srinivas TN Landscape Survey": {
+            "168-Thiruvarur Landscape Survey 04-2025": {"project_id": 4, "form_id": "168-Thiruvarur Landscape Survey 04-2025"},
+            "169-Nannilam Landscape Survey 04-2025": {"project_id": 4, "form_id": "169-Nannilam Landscape Survey 04-2025"},
+            "178-Gandharvakottai (SC) Landscape Survey 04-2025": {"project_id": 4, "form_id": "178-Gandharvakottai (SC) Landscape Survey 04-2025"},
+            "165-Vedaranyam Landscape Survey 04-2025": {"project_id": 4, "form_id": "165-Vedaranyam Landscape Survey 04-2025"},
+            "200-Bodinayakanur Landscape Survey 04-2025": {"project_id": 4, "form_id": "200-Bodinayakanur Landscape Survey 04-2025"},
+            "166-Thiruthuraipoondi (SC) Landscape Survey 04-2025": {"project_id": 4, "form_id": "166-Thiruthuraipoondi (SC) Landscape Survey 04-2025"},
+            "Test TN Landscape Survey 05-2025": {"project_id": 4, "form_id": "Test TN Landscape Survey 05-2025"},
+            "160-Sirkazhi (SC) Landscape Survey 04-2025": {"project_id": 4, "form_id": "160-Sirkazhi (SC) Landscape Survey 04-2025"},
+            "77-Ulundurpettai Landscape Survey 04-2025": {"project_id": 4, "form_id": "77-Ulundurpettai Landscape Survey 04-2025"},
+            "60-Pappireddippatti Landscape Survey 04-2025": {"project_id": 4, "form_id": "60-Pappireddippatti Landscape Survey 04-2025"},
+            "79-Sankarapuram Landscape Survey 04-2025": {"project_id": 4, "form_id": "79-Sankarapuram Landscape Survey 04-2025"},
+            "167-Mannargudi Landscape Survey 04-2025": {"project_id": 4, "form_id": "167-Mannargudi Landscape Survey 04-2025"},
+            "177-Peravurani Landscape Survey 04-2025": {"project_id": 4, "form_id": "177-Peravurani Landscape Survey 04-2025"},
+            "84-Omalur Landscape Survey 04-2025": {"project_id": 4, "form_id": "84-Omalur Landscape Survey 04-2025"}
+        },
+        "01 Ravi Sai TN Landscape": {
+            "17-Royapuram Landscape Survey 04-2025": {"project_id": 6, "form_id": "17-Royapuram Landscape Survey 04-2025"},
+            "162-Poompuhar Landscape Survey 04-2025": {"project_id": 6, "form_id": "162-Poompuhar Landscape Survey 04-2025"},
+            "164-Kilvelur (SC) Landscape Survey 04-2025": {"project_id": 6, "form_id": "164-Kilvelur (SC) Landscape Survey 04-2025"},
+            "176-Pattukkottai Landscape Survey 04-2025": {"project_id": 6, "form_id": "176-Pattukkottai Landscape Survey 04-2025"},
+            "206-Virudhunagar Landscape Survey 04-2025": {"project_id": 6, "form_id": "206-Virudhunagar Landscape Survey 04-2025"},
+            "25-Mylapore Landscape Survey 05-2025": {"project_id": 6, "form_id": "25-Mylapore Landscape Survey 05-2025"},
+            "26-Velachery Landscape Survey 04-2025": {"project_id": 6, "form_id": "26-Velachery Landscape Survey 04-2025"},
+            "28-Alandur Landscape Survey 04-2025": {"project_id": 6, "form_id": "28-Alandur Landscape Survey 04-2025"},
+            "4-Tiruvallur Landscape Survey 04-2025 copy 2": {"project_id": 6, "form_id": "4-Tiruvallur Landscape Survey 04-2025 copy 2"},
+            "98-Erode (East) Landscape Survey 04-2025": {"project_id": 6, "form_id": "98-Erode (East) Landscape Survey 04-2025"},
+            "99-Erode (West) Landscape Survey 04-2025": {"project_id": 6, "form_id": "99-Erode (West) Landscape Survey 04-2025"}
+        },
+        "01 Vasu Srinivas TN Landscape": {
+            "53-Krishnagiri Landscape Survey 04-2025": {"project_id": 3, "form_id": "53-Krishnagiri Landscape Survey 04-2025"},
+            "117-Kavundampalayam Landscape Survey 04-2025": {"project_id": 3, "form_id": "117-Kavundampalayam Landscape Survey 04-2025"},
+            "119-Thondamuthur Landscape Survey 04-2025": {"project_id": 3, "form_id": "119-Thondamuthur Landscape Survey 04-2025"},
+            "120-Coimbatore (South) Landscape Survey 04-2025": {"project_id": 3, "form_id": "120-Coimbatore (South) Landscape Survey 04-2025"},
+            "121-Singanallur Landscape Survey 04-2025": {"project_id": 3, "form_id": "121-Singanallur Landscape Survey 04-2025"},
+            "13-Kolathur Landscape Survey 04-2025": {"project_id": 3, "form_id": "13-Kolathur Landscape Survey 04-2025"},
+            "15-Thiru-Vi-Ka-Nagar (SC) Landscape Survey 04-2025": {"project_id": 3, "form_id": "15-Thiru-Vi-Ka-Nagar (SC) Landscape Survey 04-2025"},
+            "151-Tittakudi (SC) Landscape Survey 04-2025": {"project_id": 3, "form_id": "151-Tittakudi (SC) Landscape Survey 04-2025"},
+            "154-Panruti Landscape Survey 04-2025": {"project_id": 3, "form_id": "154-Panruti Landscape Survey 04-2025"},
+            "162-Poompuhar Landscape Survey 04-2025": {"project_id": 3, "form_id": "162-Poompuhar Landscape Survey 04-2025"},
+            "164-Kilvelur (SC) Landscape Survey 04-2025": {"project_id": 3, "form_id": "164-Kilvelur (SC) Landscape Survey 04-2025"},
+            "170-Thiruvidaimarudur (SC) Landscape Survey 04-2025": {"project_id": 3, "form_id": "170-Thiruvidaimarudur (SC) Landscape Survey 04-2025"},
+            "175-Orathanadu Landscape Survey 04-2025": {"project_id": 3, "form_id": "175-Orathanadu Landscape Survey 04-2025"},
+            "176-Pattukkottai Landscape Survey 04-2025": {"project_id": 3, "form_id": "176-Pattukkottai Landscape Survey 04-2025"},
+            "185-Tiruppattur Landscape Survey 04-2025 copy 37": {"project_id": 3, "form_id": "185-Tiruppattur Landscape Survey 04-2025 copy 37"},
+            "206-Virudhunagar Landscape Survey 04-2025": {"project_id": 3, "form_id": "206-Virudhunagar Landscape Survey 04-2025"},
+            "23-Saidapet Landscape Survey 04-2025": {"project_id": 3, "form_id": "23-Saidapet Landscape Survey 04-2025"},
+            "26-Velachery Landscape Survey 04-2025": {"project_id": 3, "form_id": "26-Velachery Landscape Survey 04-2025"},
+            "28-Alandur Landscape Survey 04-2025": {"project_id": 3, "form_id": "28-Alandur Landscape Survey 04-2025"},
+            "31-Tambaram Landscape Survey 04-2025": {"project_id": 3, "form_id": "31-Tambaram Landscape Survey 04-2025"},
+            "4-Tiruvallur Landscape Survey 04-2025 copy 2": {"project_id": 3, "form_id": "4-Tiruvallur Landscape Survey 04-2025 copy 2"},
+            "40-Katpadi Landscape Survey 04-2025": {"project_id": 3, "form_id": "40-Katpadi Landscape Survey 04-2025"},
+            "41-Ranipet Landscape Survey 04-2025": {"project_id": 3, "form_id": "41-Ranipet Landscape Survey 04-2025"},
+            "42-Arcot Landscape Survey 04-2025": {"project_id": 3, "form_id": "42-Arcot Landscape Survey 04-2025"},
+            "43-Vellore Landscape Survey 04-2025": {"project_id": 3, "form_id": "43-Vellore Landscape Survey 04-2025"},
+            "52-Bargur Landscape Survey 04-2025": {"project_id": 3, "form_id": "52-Bargur Landscape Survey 04-2025"},
+            "59-Dharmapuri Landscape Survey 04-2025": {"project_id": 3, "form_id": "59-Dharmapuri Landscape Survey 04-2025"},
+            "6-Avadi Landscape Survey 04-2025": {"project_id": 3, "form_id": "6-Avadi Landscape Survey 04-2025"},
+            "7-Maduravoyal Landscape Survey 04-2025": {"project_id": 3, "form_id": "7-Maduravoyal Landscape Survey 04-2025"},
+            "70-Gingee Landscape Survey 04-2025": {"project_id": 3, "form_id": "70-Gingee Landscape Survey 04-2025"},
+            "71-Mailam Landscape Survey 04-2025": {"project_id": 3, "form_id": "71-Mailam Landscape Survey 04-2025"},
+            "72-Tindivanam (SC) Landscape Survey 04-2025": {"project_id": 3, "form_id": "72-Tindivanam (SC) Landscape Survey 04-2025"},
+            "75-Vikravandi Landscape Survey 04-2025": {"project_id": 3, "form_id": "75-Vikravandi Landscape Survey 04-2025"},
+            "76-Tirukkoyilur Landscape Survey 04-2025": {"project_id": 3, "form_id": "76-Tirukkoyilur Landscape Survey 04-2025"},
+            "98-Erode (East) Landscape Survey 04-2025": {"project_id": 3, "form_id": "98-Erode (East) Landscape Survey 04-2025"},
+            "99-Erode (West) Landscape Survey 04-2025": {"project_id": 3, "form_id": "99-Erode (West) Landscape Survey 04-2025"},
+            "Test TN Landscape Survey 05-2025": {"project_id": 3, "form_id": "Test TN Landscape Survey 05-2025"}
         }
     }
 }
@@ -196,10 +295,23 @@ def filter_submissions_by_date(submissions, selected_date):
         return [submission for submission in submissions if submission['__system']['submissionDate'].startswith(selected_date_str)]
     return submissions
 
+def get_audio_duration(audio_content):
+    """Calculate duration of audio file in seconds"""
+    try:
+        with tempfile.NamedTemporaryFile(delete=True) as tmp_file:
+            tmp_file.write(audio_content)
+            tmp_file.flush()
+            audio = AudioSegment.from_file(tmp_file.name)
+            return len(audio) / 1000  # Convert milliseconds to seconds
+    except Exception as e:
+        st.warning(f"Could not calculate duration: {str(e)}")
+        return None
+
 def download_audio_files(selected_server, form_name, project_id, form_id, audio_submissions):
     config = ODK_CONFIGS[selected_server]
     zip_buffer = io.BytesIO()
     download_status = []
+    duration_data = []
 
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for i, (_, row) in enumerate(audio_submissions.iterrows()):
@@ -217,30 +329,52 @@ def download_audio_files(selected_server, form_name, project_id, form_id, audio_
                     )
                     audio_response.raise_for_status()
 
+                    # Calculate duration
+                    duration_seconds = get_audio_duration(audio_response.content)
+                    duration_str = f"{duration_seconds:.2f}s" if duration_seconds else "N/A"
+
                     clean_name = f"{submitted_by}_{audio_file}".replace(" ", "_").replace("/", "_").replace("\\", "_")
                     zip_file.writestr(clean_name, audio_response.content)
-                    download_status.append(f"✅ Downloaded: {clean_name}")
+
+                    # Store duration information
+                    duration_data.append({
+                        "File Name": clean_name,
+                        "Duration (s)": duration_seconds if duration_seconds else "N/A",
+                        "Status": "✅ Downloaded"
+                    })
+
+                    download_status.append(f"✅ Downloaded: {clean_name} ({duration_str})")
 
                 except requests.exceptions.RequestException as e:
                     download_status.append(f"❌ Server error for {audio_file}: {str(e)}")
+                    duration_data.append({
+                        "File Name": f"{submitted_by}_{audio_file}",
+                        "Duration (s)": "N/A",
+                        "Status": f"❌ Error: {str(e)}"
+                    })
                 except Exception as e:
                     download_status.append(f"❌ Unexpected error for {audio_file}: {str(e)}")
+                    duration_data.append({
+                        "File Name": f"{submitted_by}_{audio_file}",
+                        "Duration (s)": "N/A",
+                        "Status": f"❌ Error: {str(e)}"
+                    })
 
     if zip_buffer.getbuffer().nbytes == 0:
-        return None, download_status
+        return None, download_status, duration_data
 
     zip_buffer.seek(0)  # Reset buffer position
-    return zip_buffer, download_status
+    return zip_buffer, download_status, duration_data
 
 def main():
     try:
         # Sidebar for server, project, and form selection and date input
         st.sidebar.header("Filter Options")
         selected_server = st.sidebar.selectbox("Select Server", list(forms.keys()))
-        
+
         if selected_server:
             selected_project = st.sidebar.selectbox("Select Project", list(forms[selected_server].keys()))
-            
+
             if selected_project:
                 selected_form = st.sidebar.selectbox("Select Form", list(forms[selected_server][selected_project].keys()))
                 selected_date = st.sidebar.date_input("Select Date", None)
@@ -274,7 +408,7 @@ def main():
 
                                 # Test download section
                                 if st.button(f"🚀 Download All Audio Files from {form_name}"):
-                                    zip_buffer, download_status = download_audio_files(
+                                    zip_buffer, download_status, duration_data = download_audio_files(
                                         selected_server, form_name, project_id, form_id, audio_submissions
                                     )
 
@@ -289,8 +423,13 @@ def main():
                                             mime="application/zip"
                                         )
 
+                                    # Display duration information in a table
+                                    st.subheader("Audio File Details")
+                                    duration_df = pd.DataFrame(duration_data)
+                                    st.dataframe(duration_df)
+
                                     # Display download status messages
-                                    st.write("Download Status:")
+                                    st.subheader("Download Status")
                                     for status in download_status:
                                         st.write(status)
 
