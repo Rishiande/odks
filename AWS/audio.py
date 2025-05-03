@@ -295,17 +295,17 @@ def filter_submissions_by_date(submissions, selected_date):
         return [submission for submission in submissions if submission['__system']['submissionDate'].startswith(selected_date_str)]
     return submissions
 
-def get_audio_duration(audio_content):
-    """Calculate duration of audio file in seconds"""
-    try:
-        with tempfile.NamedTemporaryFile(delete=True) as tmp_file:
-            tmp_file.write(audio_content)
-            tmp_file.flush()
-            audio = AudioSegment.from_file(tmp_file.name)
-            return len(audio) / 1000  # Convert milliseconds to seconds
-    except Exception as e:
-        st.warning(f"Could not calculate duration: {str(e)}")
-        return None
+#def get_audio_duration(audio_content):
+    #"""Calculate duration of audio file in seconds"""
+    #try:
+        #with tempfile.NamedTemporaryFile(delete=True) as tmp_file:
+            #tmp_file.write(audio_content)
+            #tmp_file.flush()
+            #audio = AudioSegment.from_file(tmp_file.name)
+            #return len(audio) / 1000  # Convert milliseconds to seconds
+    #except Exception as e:
+        #st.warning(f"Could not calculate duration: {str(e)}")
+        #return None
 
 def download_audio_files(selected_server, form_name, project_id, form_id, audio_submissions):
     config = ODK_CONFIGS[selected_server]
