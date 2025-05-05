@@ -12,3 +12,10 @@ scipy
 matplotlib
 pandas
 requests
+streamlit
+requests
+pandas
+python-dotenv
+pydub
+openpyxl
+python-dateutil
