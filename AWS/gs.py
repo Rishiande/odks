@@ -459,7 +459,7 @@ def create_excel_for_project(server_name, project_name, forms_data):
     return excel_buffer
 
 # Streamlit App
-st.set_page_config(page_title="ODK Data Processor", layout="wide")
+st.set_page_config(page_title="server2 Data Filtering", layout="wide")
 st.title("📊 ODK Form Data Processor - Multi-Project")
 
 st.markdown("""
