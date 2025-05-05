@@ -10,6 +10,14 @@ pydub
 numpy
 scipy
 matplotlib
+streamlit
+requests
+pandas
+python-dotenv
+pydub
+openpyxl
+python-dateutil
+xlsxwriter
 pandas
 requests
 streamlit
