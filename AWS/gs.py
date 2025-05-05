@@ -37,27 +37,24 @@ required_columns = [
 
 # Forms structure
 forms = {
-    "Server 1": {
-        "03 BK TN AC Landscape": {
-            "148-Kunnam Landscape Survey 04-2025": {
-                "project_id": 5,
-                "form_id": "148-Kunnam Landscape Survey 04-2025"
-            },
-            "110-Coonoor": {"project_id": 5, "form_id": "110-Coonoor Landscape Survey 04-2025"},
-            "223-Alangulam": {"project_id": 5, "form_id": "223-Alangulam Landscape Survey 04-2025"},
-            "63-Tiruvannamalai": {"project_id": 5, "form_id": "63-Tiruvannamalai Landscape Survey 04-2025"},
-            "64-Kilpennathur": {"project_id": 5, "form_id": "64-KilpennathurLandscape Survey 04-2025"},
-            "67-Arani": {"project_id": 5, "form_id": "67-Arani Landscape Survey 04-2025"},
-            "100-Modakkurichi": {"project_id": 5, "form_id": "100-Modakkurichi Landscape Survey 04-2025"},
-            "131-Natham": {"project_id": 5, "form_id": "131-Natham Landscape Survey 04-2025"},
-            "133-Vedasandur": {"project_id": 5, "form_id": "133-Vedasandur Landscape Survey 05-2025"},
-            "148-Kunnam": {"project_id": 5, "form_id": "148-Kunnam Landscape Survey 04-2025"},
-            "149-Ariyalur": {"project_id": 5, "form_id": "149-Ariyalur Landscape Survey 04-2025"},
-            "152-Vriddhachalam": {"project_id": 5, "form_id": "152-Vriddhachalam Landscape Survey 04-2025"},
-            "197-Usilampatti": {"project_id": 5, "form_id": "197-Usilampatti Landscape Survey 04-2025"},
-            "224-Tirunelveli": {"project_id": 5, "form_id": "224-Tirunelveli Landscape Survey 04-2025"},
-            "95-Paramathi-Velur": {"project_id": 5, "form_id": "95-Paramathi-Velur Landscape Survey 04-2025"},
-            "55-Hosur": {"project_id": 5, "form_id": "55-Hosur Landscape Survey 04-2025"}
+    "Server 2": {
+        "01 FMRS TN LandScape Survey": {
+            "139-Srirangam": {"project_id": 3, "form_id": "139-SrirangamLandscape Survey 04-2025"},
+            "141-Tiruchirappalli (East)": {"project_id": 3, "form_id": "141-Tiruchirappalli (East) Landscape Survey 04-2025"},
+            "163-Nagapattinam": {"project_id": 3, "form_id": "163-Nagapattinam Landscape Survey 04-2025"},
+            "172-Papanasam": {"project_id": 3, "form_id": "172-Papanasam Landscape Survey 04-2025"},
+            "174-Thanjavur": {"project_id": 3, "form_id": "174-Thanjavur Landscape Survey 04-2025"},
+            "177-Peravurani": {"project_id": 3, "form_id": "177-Peravurani Landscape Survey 04-2025"},
+            "205-Sivakasi": {"project_id": 3, "form_id": "205-Sivakasi Landscape Survey 04-2025"},
+            "209-Paramakudi (SC)": {"project_id": 3, "form_id": "209-Paramakudi (SC) Landscape Survey 04-2025"},
+            "213-Vilathikulam": {"project_id": 3, "form_id": "213-Vilathikulam Landscape Survey 04-2025"},
+            "216-Srivaikuntam": {"project_id": 3, "form_id": "216-Srivaikuntam Landscape Survey 04-2025"},
+            "217-Ottapidaram (SC)": {"project_id": 3, "form_id": "217 - Ottapidaram (SC) Landscape Survey 04-2025"},
+            "65-Kalasapakkam": {"project_id": 3, "form_id": "65-Kalasapakkam Landscape Survey 04-2025"},
+            "68-Cheyyar": {"project_id": 3, "form_id": "68-Cheyyar Landscape Survey 04-2025"},
+            "77-Ulundurpettai": {"project_id": 3, "form_id": "77-Ulundurpettai Landscape Survey 04-2025"},
+            "8-Ambattur": {"project_id": 3, "form_id": "8-Ambattur Landscape Survey 04-2025"},
+            "Test Landscape Survey 04-2025 copy": {"project_id": 3, "form_id": "Test Landscape Survey 04-2025 copy"}
         }
     }
 }
