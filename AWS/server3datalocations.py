@@ -62,8 +62,8 @@ PROJECTS = {
             },
             "160-Sirkazhi": {
                 "form_id": "160-Sirkazhi (SC) Landscape Survey 04-2025",
-                "excel_file": "160.Sizkazhi.xlsx",
-                "sheet_name": "160.Sizkazhi",
+                "excel_file": "160.Sirkazhi.xlsx",  # Fixed typo: Sizkazhi -> Sirkazhi
+                "sheet_name": "160.Sirkazhi",
                 "geocode_city": "Sirkazhi, Tamil Nadu, India"
             },
             "165-Vedaranyam": {
@@ -995,9 +995,9 @@ def process_submissions(submissions, form_name, project_id, form_id, server_path
         project_config = PROJECTS[project_name]
         # Map the full form name to the PROJECTS form key
         form_key = FORM_NAME_MAPPING.get(survey_name, survey_name)
-        excel_base_path = f"{server_path}\\{project_config['excel_base_path']}"
+        excel_base_path = os.path.join(server_path, project_config['excel_base_path'])
         survey_config = project_config["forms"][form_key]
-        excel_file = f"{excel_base_path}\\{survey_config['excel_file']}"
+        excel_file = os.path.join(excel_base_path, survey_config['excel_file'])
         sheet_name = survey_config["sheet_name"]
         geocode_city = survey_config["geocode_city"]
         
