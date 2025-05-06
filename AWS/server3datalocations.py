@@ -34,7 +34,7 @@ GOOGLE_MAPS_API_KEY = "AIzaSyB2RC76X859_0UQKBwqTBwRc6eVnfdQN88"
 PROJECTS = {
     "01 Bhaskar Srinivas TN Landscape Survey": {
         "project_id": 4,
-        "excel_base_path": r"01 Bhaskar Srinivas TN Landscape Survey",
+        "excel_base_path": r"server3/01 Bhaskar Srinivas TN Landscape Survey",  # Updated to include server3
         "forms": {
             "60-Pappireddippatti": {
                 "form_id": "60-Pappireddippatti Landscape Survey 04-2025",
@@ -62,7 +62,7 @@ PROJECTS = {
             },
             "160-Sirkazhi": {
                 "form_id": "160-Sirkazhi (SC) Landscape Survey 04-2025",
-                "excel_file": "160.Sirkazhi.xlsx",  # Fixed typo: Sizkazhi -> Sirkazhi
+                "excel_file": "160.Sirkazhi.xlsx",
                 "sheet_name": "160.Sirkazhi",
                 "geocode_city": "Sirkazhi, Tamil Nadu, India"
             },
@@ -124,7 +124,7 @@ PROJECTS = {
     },
     "01 Laxmi Narayana TN Landscape": {
         "project_id": 5,
-        "excel_base_path": r"01 Laxmi Narayana TN Landscape",
+        "excel_base_path": r"server3/01 Laxmi Narayana TN Landscape",
         "forms": {
             "78-Rishivandiyam": {
                 "form_id": "78-Rishivandiyam Landscape Survey 04-2025 copy 42",
@@ -154,7 +154,7 @@ PROJECTS = {
     },
     "01 Ravi Sai TN Landscape": {
         "project_id": 6,
-        "excel_base_path": r"01 Ravi Sai TN Landscape",
+        "excel_base_path": r"server3/01 Ravi Sai TN Landscape",
         "forms": {
             "4-Tiruvallur": {
                 "form_id": "4-Tiruvallur Landscape Survey 04-2025 copy 2",
@@ -226,7 +226,7 @@ PROJECTS = {
     },
     "01 Vasu Srinivas TN Landscape": {
         "project_id": 3,
-        "excel_base_path": r"01 Vasu Srinivas TN Landscape",
+        "excel_base_path": r"server3/01 Vasu Srinivas TN Landscape",
         "forms": {
             "4-Tiruvallur": {
                 "form_id": "4-Tiruvallur Landscape Survey 04-2025 copy 2",
@@ -995,11 +995,22 @@ def process_submissions(submissions, form_name, project_id, form_id, server_path
         project_config = PROJECTS[project_name]
         # Map the full form name to the PROJECTS form key
         form_key = FORM_NAME_MAPPING.get(survey_name, survey_name)
-        excel_base_path = os.path.join(server_path, project_config['excel_base_path'])
+        excel_base_path = project_config['excel_base_path']  # e.g., server3/01 Bhaskar Srinivas TN Landscape Survey
         survey_config = project_config["forms"][form_key]
         excel_file = os.path.join(excel_base_path, survey_config['excel_file'])
         sheet_name = survey_config["sheet_name"]
         geocode_city = survey_config["geocode_city"]
+        
+        # Check if the file exists and provide detailed error message
+        if not os.path.exists(excel_file):
+            error_msg = (
+                f"Excel file not found at {excel_file}. "
+                f"Please ensure the file exists in the GitHub repository at the path: {excel_base_path}/{survey_config['excel_file']}. "
+                f"Check for typos in the file name, case sensitivity, or incorrect folder structure."
+            )
+            logger.error(error_msg)
+            st.error(error_msg)
+            return None
         
         locations_df = pd.read_excel(excel_file, sheet_name=sheet_name)
         locations = locations_df[column_name].dropna().tolist()
@@ -1013,18 +1024,23 @@ def process_submissions(submissions, form_name, project_id, form_id, server_path
                 "lon": result["lon"],
                 "status": result["status"]
             })
-    except FileNotFoundError:
-        logger.error(f"Excel file not found at {excel_file}")
-        st.error(f"Excel file not found at {excel_file}. Please check the path.")
-        geocoded_locations = []
+    except FileNotFoundError as e:
+        error_msg = (
+            f"Excel file not found at {excel_file}. "
+            f"Please ensure the file exists in the GitHub repository at the path: {excel_base_path}/{survey_config['excel_file']}. "
+            f"Check for typos in the file name, case sensitivity, or incorrect folder structure. Error: {str(e)}"
+        )
+        logger.error(error_msg)
+        st.error(error_msg)
+        return None
     except KeyError as e:
         logger.error(f"Form configuration not found for {survey_name}: {str(e)}")
         st.error(f"Form configuration not found for {survey_name}. Please check the form name.")
-        geocoded_locations = []
+        return None
     except Exception as e:
         logger.error(f"Error reading Excel file: {str(e)}")
         st.error(f"Error reading Excel file: {str(e)}")
-        geocoded_locations = []
+        return None
     
     # Calculate distance to nearest polling station and identify matches for each radius
     radius_thresholds = [2, 5, 10, 15, 20, 25]  # in kilometers
@@ -1090,7 +1106,7 @@ def main():
     
     # Sidebar controls
     st.sidebar.header("Filters")
-    server_path = st.sidebar.text_input("Server Path", value="server3", key="server_path")
+    # Removed server_path input since we're hardcoding the path in excel_base_path
     selected_server = st.sidebar.selectbox("Server", list(FORMS.keys()))
     selected_project = st.sidebar.selectbox("Project", list(FORMS[selected_server].keys()))
     selected_form = st.sidebar.selectbox("Form", list(FORMS[selected_server][selected_project].keys()))
@@ -1121,12 +1137,13 @@ def main():
             )
         
         if submissions:
+            # Pass an empty server_path since it's not needed anymore
             df = process_submissions(
                 submissions,
                 selected_form,
                 form_info['project_id'],
                 form_info['form_id'],
-                server_path,
+                "",  # server_path is not used
                 selected_project,
                 selected_form,
                 distance_threshold
