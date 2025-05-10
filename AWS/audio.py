@@ -215,7 +215,7 @@ forms = {
             "54-Veppanahalli": {"project_id": 10, "form_id": "54-Veppanahalli Landscape Survey 04-2025"},
             "94-Namakkal": {"project_id": 10, "form_id": "94-Namakkal Landscape Survey 04-2025"},
             "175-Orathanadu" : {"project_id":10,"form_id":"175-Orathanadu Landscape Survey 05-2025"},
-            "143-Lalgudi" : {"project_id":10,"from_id":"143-Lalgudi Landscape Survey 05-2025"}
+            "143-Lalgudi" : {"project_id":10,"form_id":"143-Lalgudi Landscape Survey 05-2025"}
         },
         "03 Bikas V6": {
             "154-Panruti": {"project_id": 12, "form_id": "154-Panruti Landscape Survey 05-2025"},
