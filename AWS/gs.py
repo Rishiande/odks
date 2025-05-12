@@ -9,11 +9,8 @@ from io import BytesIO
 import logging
 import os
 from dotenv import load_dotenv
-import re
-import time
 import urllib.parse
-import zipfile
-from pydub import AudioSegment  # For audio duration
+import re
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -22,797 +19,945 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# ODK Credentials
-ODK_USERNAME = os.getenv("ODK_USERNAME", "rushi@tnodk01.ii.com")
-ODK_PASSWORD = os.getenv("ODK_PASSWORD", "rushi2025&")
+# ODK Configuration
+ODK_CONFIG = {
+    "server1": {
+        "BASE_URL": "https://tnodk01.indiaintentions.com",
+        "USERNAME": os.getenv("ODK_USERNAME", "rushi@tnodk01.ii.com"),
+        "PASSWORD": os.getenv("ODK_PASSWORD", "rushi2025&")
+    },
+    "server2": {
+        "BASE_URL": "https://tnodk02.indiaintentions.com",
+        "USERNAME": os.getenv("ODK_USERNAME_SERVER2", "rushi@tnodk01.ii.com"),
+        "PASSWORD": os.getenv("ODK_PASSWORD_SERVER2", "rushi2025&")
+    },
+    "server3": {
+        "BASE_URL": "https://tnodk03.indiaintentions.com",
+        "USERNAME": os.getenv("ODK_USERNAME_SERVER3", "rushi@tnodk01.ii.com"),
+        "PASSWORD": os.getenv("ODK_PASSWORD_SERVER3", "rushi2025&")
+    }
+}
 
-# Define required columns globally
-required_columns = [
-    'Form Name', 'Date', 'Audio File', 'Audio Present', 'Location Present',
-    'Name', 'Gender', 'Age', 'Age Group', 'Caste', 'Block', 'Village',
-    'Submitted By', 'Phone Number', 'Interview Length (min)', 'Duration Group',
-    'Latitude', 'Longitude', 'instanceID', 'SubmittedBy_AudioFile', 'Custom_Concatenated',
-    'Audio Duration (MM:SS)', 'Audio Validity'  # New columns
-]
-
-# Forms structure
-forms = {
-    "Server 2": {
-        "01 FMRS TN LandScape Survey": {
-            "139-Srirangam": {"project_id": 3, "form_id": "139-SrirangamLandscape Survey 04-2025"},
-            "141-Tiruchirappalli (East)": {"project_id": 3, "form_id": "141-Tiruchirappalli (East) Landscape Survey 04-2025"},
-            "163-Nagapattinam": {"project_id": 3, "form_id": "163-Nagapattinam Landscape Survey 04-2025"},
-            "172-Papanasam": {"project_id": 3, "form_id": "172-Papanasam Landscape Survey 04-2025"},
-            "174-Thanjavur": {"project_id": 3, "form_id": "174-Thanjavur Landscape Survey 04-2025"},
-            "177-Peravurani": {"project_id": 3, "form_id": "177-Peravurani Landscape Survey 04-2025"},
-            "205-Sivakasi": {"project_id": 3, "form_id": "205-Sivakasi Landscape Survey 04-2025"},
-            "209-Paramakudi (SC)": {"project_id": 3, "form_id": "209-Paramakudi (SC) Landscape Survey 04-2025"},
-            "213-Vilathikulam": {"project_id": 3, "form_id": "213-Vilathikulam Landscape Survey 04-2025"},
-            "216-Srivaikuntam": {"project_id": 3, "form_id": "216-Srivaikuntam Landscape Survey 04-2025"},
-            "217-Ottapidaram (SC)": {"project_id": 3, "form_id": "217 - Ottapidaram (SC) Landscape Survey 04-2025"},
-            "65-Kalasapakkam": {"project_id": 3, "form_id": "65-Kalasapakkam Landscape Survey 04-2025"},
-            "68-Cheyyar": {"project_id": 3, "form_id": "68-Cheyyar Landscape Survey 04-2025"},
-            "77-Ulundurpettai": {"project_id": 3, "form_id": "77-Ulundurpettai Landscape Survey 04-2025"},
-            "8-Ambattur": {"project_id": 3, "form_id": "8-Ambattur Landscape Survey 04-2025"},
-            "Test Landscape Survey 04-2025 copy": {"project_id": 3, "form_id": "Test Landscape Survey 04-2025 copy"}
+# Survey configurations
+SURVEYS = {
+    "server1": {
+        "Krishnagiri APP": {
+            "52-Bargur": {
+                "form_id": "52-Bargur Landscape Survey 05-2025",
+                "project_id": 7
+            },
+            "53-Krishnagiri": {
+                "form_id": "53-Krishnagiri Landscape Survey 05-2025",
+                "project_id": 7
+            }
+        },
+        "04 TN AC Landscape": {
+            "151-Tittakudi (SC)": {
+                "form_id": "151-Tittakudi (SC) Landscape Survey 05-2025",
+                "project_id": 6
+            },
+            "156-Kurinjipadi": {
+                "form_id": "156-Kurinjipadi Landscape Survey 05-2025",
+                "project_id": 6
+            },
+            "159-Kattumannarkoil (SC)": {
+                "form_id": "159-Kattumannarkoil (SC) Landscape Survey 04-2025",
+                "project_id": 6
+            },
+            "181-Thirumayam": {
+                "form_id": "181-Thirumayam Landscape Survey 04-2025",
+                "project_id": 6
+            },
+            "204-Sattur": {
+                "form_id": "204-Sattur Landscape Survey 05-2025",
+                "project_id": 6
+            },
+            "37-Kancheepuram": {
+                "form_id": "37-Kancheepuram Landscape Survey 05-2025",
+                "project_id": 6
+            }
+        },
+        "03 BK TN AC Landscape": {
+            "100-Modakkurichi": {
+                "form_id": "100-Modakkurichi Landscape Survey 04-2025",
+                "project_id": 5
+            },
+            "153-Neyveli": {
+                "form_id": "153-Neyveli Landscape Survey 05-2025",
+                "project_id": 5
+            },
+            "197-Usilampatti": {
+                "form_id": "197-Usilampatti Landscape Survey 04-2025",
+                "project_id": 5
+            },
+            "63-Tiruvannamalai": {
+                "form_id": "63-Tiruvannamalai Landscape Survey 04-2025",
+                "project_id": 5
+            },
+            "95-Paramathi-Velur": {
+                "form_id": "95-Paramathi-Velur Landscape Survey 05-2025",
+                "project_id": 5
+            }
+        },
+        "Thoothukudi APP": {
+            "215-Tiruchendur": {
+                "form_id": "215-Tiruchendur Landscape Survey 05-2025",
+                "project_id": 10
+            }
+        },
+        "Virudhunagar APP": {
+            "206-Virudhunagar": {
+                "form_id": "206-Virudhunagar Landscape Survey 05-2025",
+                "project_id": 8
+            },
+            "208-Tiruchuli": {
+                "form_id": "208-Tiruchuli Landscape Survey 05-2025",
+                "project_id": 8
+            }
+        },
+        "Tanjavore APP": {
+            "176-Pattukkottai": {
+                "form_id": "176-Pattukkottai Landscape Survey 05-2025",
+                "project_id": 9
+            }
+        },
+        "BK TN AC Landscape": {
+            "103-Perundurai": {
+                "form_id": "103-Perundurai Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "132 Dindigul": {
+                "form_id": "132 Dindigul Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "135-Karur": {
+                "form_id": "135-Karur Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "146. Thuraiyur (SC)": {
+                "form_id": "146. Thuraiyur (SC) Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "150-Jayankondam": {
+                "form_id": "150-Jayankondam Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "155-Cuddalore": {
+                "form_id": "155-Cuddalore Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "171-Kumbakonam": {
+                "form_id": "171-Kumbakonam Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "189-Madurai East": {
+                "form_id": "189-Madurai East Landscape Survey 04-2025",
+                "project_id": 4
+            }
+        },
+        "Ramanathapuram APP": {
+            "211-Ramanathapuram": {
+                "form_id": "211-Ramanathapuram Landscape Survey 05-2025",
+                "project_id": 11
+            },
+            "212-Mudhukulathur": {
+                "form_id": "212-Mudhukulathur Landscape Survey 05-2025",
+                "project_id": 11
+            }
+        },
+        "Sai Sivaganga APP": {
+            "184-Karaikudi": {
+                "form_id": "184-Karaikudi Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "185-Tiruppattur": {
+                "form_id": "185-Tiruppattur Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "186-Sivaganga": {
+                "form_id": "186-Sivaganga Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "187-Manamadurai (SC)": {
+                "form_id": "187-Manamadurai (SC) Landscape Survey 05-2025",
+                "project_id": 12
+            }
+        }
+    },
+    "server2": {
+        "01 Shankar Subramaniam TN Landscape Survey": {
+            "108-Udhagamandalam": {
+                "form_id": "108-Udhagamandalam Landscape Survey 04-2025",
+                "project_id": 10
+            },
+            "142-Thiruverumbur": {
+                "form_id": "142-Thiruverumbur Landscape Survey 04-2025",
+                "project_id": 10
+            },
+            "143-Lalgudi": {
+                "form_id": "143-Lalgudi Landscape Survey 05-2025",
+                "project_id": 10
+            },
+            "144-Manachanallur": {
+                "form_id": "144-Manachanallur Landscape Survey 04-2025",
+                "project_id": 10
+            },
+            "175-Orathanadu": {
+                "form_id": "175-Orathanadu Landscape Survey 05-2025",
+                "project_id": 10
+            },
+            "219-Sankarankovil (SC)": {
+                "form_id": "219-Sankarankovil (SC) Landscape Survey 04-2025",
+                "project_id": 10
+            },
+            "54-Veppanahalli": {
+                "form_id": "54-Veppanahalli Landscape Survey 04-2025",
+                "project_id": 10
+            }
+        },
+        "Nanda TN Landscape": {
+            "128-Oddanchatram": {
+                "form_id": "128-Oddanchatram Landscape Survey 05-2025",
+                "project_id": 11
+            },
+            "154-Panruti": {
+                "form_id": "154-Panruti Landscape Survey 05-2025",
+                "project_id": 11
+            },
+            "155-Cuddalore": {
+                "form_id": "155-Cuddalore Landscape Survey 05-2025",
+                "project_id": 11
+            },
+            "162-Poompuhar": {
+                "form_id": "162-Poompuhar Landscape Survey 05-2025",
+                "project_id": 11
+            },
+            "164-Kilvelur (SC)": {
+                "form_id": "164-Kilvelur (SC) Landscape Survey 05-2025",
+                "project_id": 11
+            },
+            "170-Thiruvidaimarudur (SC)": {
+                "form_id": "170-Thiruvidaimarudur (SC) Landscape Survey 05-2025",
+                "project_id": 11
+            }
+        },
+        "Shankar Tenkasi": {
+            "220-Vasudevanallur (SC)": {
+                "form_id": "220-Vasudevanallur (SC) Landscape Survey 05-2025",
+                "project_id": 13
+            }
+        },
+        "Nanda Kanniyakumari APP": {
+            "229-Kanniyakumari": {
+                "form_id": "229-Kanniyakumari Landscape Survey 05-2025",
+                "project_id": 14
+            },
+            "230-Nagercoil": {
+                "form_id": "230-Nagercoil Landscape Survey 05-2025",
+                "project_id": 14
+            },
+            "231-Colachal": {
+                "form_id": "231-Colachal Landscape Survey 05-2025",
+                "project_id": 14
+            },
+            "232-Padmanabhapuram": {
+                "form_id": "232-Padmanabhapuram Landscape Survey 05-2025",
+                "project_id": 14
+            },
+            "233-Vilavancode": {
+                "form_id": "233-Vilavancode Landscape Survey 05-2025",
+                "project_id": 14
+            },
+            "234-Killiyoor": {
+                "form_id": "234-Killiyoor Landscape Survey 05-2025",
+                "project_id": 14
+            }
+        },
+        "01 FMRS TN Landscape Survey": {
+            "141-Tiruchirappalli (East)": {
+                "form_id": "141-Tiruchirappalli (East) Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "172-Papanasam": {
+                "form_id": "172-Papanasam Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "177-Peravurani": {
+                "form_id": "177-Peravurani Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "209-Paramakudi (SC)": {
+                "form_id": "209-Paramakudi (SC) Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "213-Vilathikulam": {
+                "form_id": "213-Vilathikulam Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "217-Ottapidaram (SC)": {
+                "form_id": "217 - Ottapidaram (SC) Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "65-Kalasapakkam": {
+                "form_id": "65-Kalasapakkam Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "8-Ambattur": {
+                "form_id": "8-Ambattur Landscape Survey 04-2025",
+                "project_id": 3
+            }
+        },
+        "02 FMRS TN Landscape Survey": {
+            "188-Melur": {
+                "form_id": "188-Melur Landscape Survey 04-2025",
+                "project_id": 7
+            },
+            "190-Sholavandan (SC)": {
+                "form_id": "190-Sholavandan (SC) Landscape Survey 04-2025",
+                "project_id": 7
+            },
+            "191-Madurai North": {
+                "form_id": "191-Madurai North Landscape Survey 04-2025",
+                "project_id": 7
+            },
+            "192-Madurai South": {
+                "form_id": "192-Madurai South Landscape Survey 04-2025",
+                "project_id": 7
+            },
+            "193-Madurai Central": {
+                "form_id": "193-Madurai Central Landscape Survey 04-2025",
+                "project_id": 7
+            },
+            "194-Madurai West": {
+                "form_id": "194-Madurai West Landscape Survey 04-2025",
+                "project_id": 7
+            },
+            "195-Thiruparankundram": {
+                "form_id": "195-Thiruparankundram Landscape Survey 04-2025",
+                "project_id": 7
+            },
+            "196-Thirumangalam": {
+                "form_id": "196-Thirumangalam Landscape Survey 04-2025",
+                "project_id": 7
+            }
+        },
+        "01 Bikas TN Landscape Survey": {
+            "127-Palani": {
+                "form_id": "127-Palani Landscape Survey 05-2025",
+                "project_id": 4
+            },
+            "128-Oddanchatram": {
+                "form_id": "128-Oddanchatram Landscape Survey 05-2025",
+                "project_id": 4
+            },
+            "129-Athoor": {
+                "form_id": "129-Athoor Landscape Survey 05-2025 copy 4",
+                "project_id": 4
+            },
+            "130-Nilakkottai (SC)": {
+                "form_id": "130-Nilakkottai (SC) Landscape Survey 05-2025",
+                "project_id": 4
+            },
+            "143-Lalgudi": {
+                "form_id": "143-Lalgudi Landscape Survey 05-2025",
+                "project_id": 4
+            },
+            "147-Perambalur (SC)": {
+                "form_id": "147-Perambalur (SC) Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "45-Kilvaithinankuppam (SC)": {
+                "form_id": "45-Kilvaithinankuppam (SC) Landscape Survey 05-2025",
+                "project_id": 4
+            },
+            "47-Vaniyambadi": {
+                "form_id": "47-Vaniyambadi Landscape Survey 05-2025",
+                "project_id": 4
+            },
+            "49-Jolarpet": {
+                "form_id": "49-Jolarpet Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "69-Vandavasi (SC)": {
+                "form_id": "69-Vandavasi (SC) Landscape Survey 05-2025",
+                "project_id": 4
+            },
+            "81-Gangavalli (SC)": {
+                "form_id": "81-Gangavalli (SC) Landscape Survey 05-2025",
+                "project_id": 4
+            }
+        },
+        "02 Shashi TN Landscape": {
+            "25-Mylapore": {
+                "form_id": "25-Mylapore Landscape Survey 04-2025",
+                "project_id": 8
+            }
+        },
+        "02 Bikas TN Landscape Survey": {
+            "155-Cuddalore": {
+                "form_id": "155-Cuddalore Landscape Survey 04-2025",
+                "project_id": 5
+            },
+            "64-Kilpennathur": {
+                "form_id": "64-Kilpennathur Landscape Survey 04-2025",
+                "project_id": 5
+            }
+        },
+        "01 Shashi TN Landscape Survey": {
+            "88-Salem (West)": {
+                "form_id": "88-Salem (West) Landscape Survey 04-2025",
+                "project_id": 6
+            },
+            "89-Salem (North)": {
+                "form_id": "89-Salem (North) Landscape Survey 04-2025",
+                "project_id": 6
+            },
+            "90-Salem (South)": {
+                "form_id": "90-Salem (South) Landscape Survey 04-2025",
+                "project_id": 6
+            },
+            "83-Yercaud (ST)": {
+                "form_id": "83-Yercaud (ST) Landscape Survey 04-2025",
+                "project_id": 6
+            }
+        },
+        "03 Bikas V6": {
+            "40-Katpadi": {
+                "form_id": "40-Katpadi Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "41-Ranipet": {
+                "form_id": "41-Ranipet Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "42-Arcot": {
+                "form_id": "42-Arcot Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "50-Tirupattur": {
+                "form_id": "50-Tirupattur Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "63-Tiruvannamalai": {
+                "form_id": "63-Tiruvannamalai Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "72-Tindivanam (SC)": {
+                "form_id": "72-Tindivanam (SC) Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "73-Vanur": {
+                "form_id": "73-Vanur Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "78-Rishivandiyam": {
+                "form_id": "78-Rishivandiyam Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "80-Kallakurichi": {
+                "form_id": "80-Kallakurichi Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "154-Panruti": {
+                "form_id": "154-Panruti Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "182-Alangudi": {
+                "form_id": "182-Alangudi Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "207-Aruppukkottai": {
+                "form_id": "207-Aruppukkottai Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "208-Tiruchuli": {
+                "form_id": "208-Tiruchuli Landscape Survey 05-2025",
+                "project_id": 12
+            }
+        }
+    },
+    "server3": {
+        "01 Bhaskar Srinivas TN Landscape Survey": {
+            "166-Thiruthuraipoondi(SC)": {
+                "form_id": "166-Thiruthuraipoondi (SC) Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "168-Thiruvarur": {
+                "form_id": "168-Thiruvarur Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "167-Mannargudi": {
+                "form_id": "167-Mannargudi Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "165-Vedaranyam": {
+                "form_id": "165-Vedaranyam Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "Test TN Landscape Survey 04-2025": {
+                "form_id": "Test TN Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "200-Bodinayakanur": {
+                "form_id": "200-Bodinayakanur Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "169-Nannilam": {
+                "form_id": "169-Nannilam Landscape Survey 04-2025",
+                "project_id": 4
+            },
+            "77-Ulundurpettai": {
+                "form_id": "77-Ulundurpettai Landscape Survey 04-2025",
+                "project_id": 4
+            }
+        },
+        "01 Laxmi Narayana Erode": {
+            "104-Bhavani": {
+                "form_id": "104-Bhavani Landscape Survey 05-2025",
+                "project_id": 5
+            },
+            "106-Gobichettipalayam": {
+                "form_id": "106-Gobichettipalayam Landscape Survey 05-2025",
+                "project_id": 5
+            },
+            "107-Bhavanisagar": {
+                "form_id": "107-Bhavanisagar Landscape Survey 05-2025",
+                "project_id": 5
+            },
+            "98-Erode(East)": {
+                "form_id": "98-Erode (East) Landscape Survey 05-2025",
+                "project_id": 5
+            },
+            "99-Erode(West)": {
+                "form_id": "99-Erode (West) Landscape Survey 05-2025",
+                "project_id": 5
+            }
+        },
+        "01 Nirmal V6": {
+            "105-Anthiyur": {
+                "form_id": "105-Anthiyur Landscape Survey 05-2025",
+                "project_id": 9
+            },
+            "93-Senthamangalam(ST)": {
+                "form_id": "93-Senthamangalam (ST) Landscape Survey 05-2025",
+                "project_id": 9
+            }
+        },
+        "05 Beekay V6": {
+            "178-Gandharvakottai (SC)": {
+                "form_id": "178-Gandharvakottai (SC) Landscape Survey 05-2025",
+                "project_id": 8
+            },
+            "4-Thiruvallur": {
+                "form_id": "4-Thiruvallur Landscape Survey 05-2025",
+                "project_id": 8
+            },
+            "51-Uthangarai (SC)": {
+                "form_id": "51-Uthangarai (SC) Landscape Survey 05-2025",
+                "project_id": 8
+            }
+        },
+        "01 Vasu Srinivas TN Landscape": {
+            "117-Kavundampalayam": {
+                "form_id": "117-Kavundampalayam Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "151-Tittakudi (SC)": {
+                "form_id": "151-Tittakudi (SC) Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "176-Pattukkottai": {
+                "form_id": "176-Pattukkottai Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "52-Bargur": {
+                "form_id": "52-Bargur Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "70-Gingee": {
+                "form_id": "70-Gingee Landscape Survey 04-2025",
+                "project_id": 3
+            },
+            "71-Mailam": {
+                "form_id": "71-Mailam Landscape Survey 05-2025",
+                "project_id": 3
+            },
+            "72-Tindivanam (SC)": {
+                "form_id": "72-Tindivanam (SC) Landscape Survey 05-2025",
+                "project_id": 3
+            },
+            "75-Vikravandi": {
+                "form_id": "75-Vikravandi Landscape Survey 04-2025",
+                "project_id": 3
+            }
+        },
+        "Sai Tiruppur": {
+            "126-Madathukulam": {
+                "form_id": "126-Madathukulam Landscape Survey 05-2025",
+                "project_id": 14
+            }
+        },
+        "Sai Madurai": {
+            "188-Melur": {
+                "form_id": "188-Melur Landscape Survey 05-2025",
+                "project_id": 13
+            },
+            "190-Sholavandan (SC)": {
+                "form_id": "190-Sholavandan (SC) Landscape Survey 05-2025",
+                "project_id": 13
+            },
+            "193-Madurai Central": {
+                "form_id": "193-Madurai Central Landscape Survey 05-2025",
+                "project_id": 13
+            }
+        },
+        "01 Sai Namakkal": {
+            "92-Rasipuram (SC)": {
+                "form_id": "92-Rasipuram (SC) Landscape Survey 05-2025",
+                "project_id": 11
+            },
+            "94-Namakkal": {
+                "form_id": "94-Namakkal Landscape Survey 05-2025",
+                "project_id": 11
+            },
+            "96-Tiruchengodu": {
+                "form_id": "96-Tiruchengodu Landscape Survey 05-2025",
+                "project_id": 11
+            },
+            "97-Kumarapalayam": {
+                "form_id": "97-Kumarapalayam Landscape Survey 05-2025",
+                "project_id": 11
+            }
+        },
+        "02 Sai Coimbatore": {
+            "111-Mettuppalayam": {
+                "form_id": "111-Mettuppalayam Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "116-Sulur": {
+                "form_id": "116-Sulur Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "119-Thondamuthur": {
+                "form_id": "119-Thondamuthur Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "120-Coimbatore (South)": {
+                "form_id": "120-Coimbatore (South) Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "121-Singanallur": {
+                "form_id": "121-Singanallur Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "122-Kinathukadavu": {
+                "form_id": "122-Kinathukadavu Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "123-Pollachi": {
+                "form_id": "123-Pollachi Landscape Survey 05-2025",
+                "project_id": 12
+            },
+            "124-Valparai (SC)": {
+                "form_id": "124-Valparai (SC) Landscape Survey 05-2025",
+                "project_id": 12
+            }
+        },
+        "03 Bikas V6": {
+            "14-Villivakkam": {
+                "form_id": "14-Villivakkam Landscape Survey 05-2025",
+                "project_id": 10
+            },
+            "176-Pattukkottai": {
+                "form_id": "176-Pattukkottai Landscape Survey 05-2025",
+                "project_id": 10
+            },
+            "182-Alangudi": {
+                "form_id": "182-Alangudi Landscape Survey 05-2025",
+                "project_id": 10
+            },
+            "207-Aruppukkottai": {
+                "form_id": "207-Aruppukkottai Landscape Survey 05-2025",
+                "project_id": 10
+            },
+            "223-Alangulam": {
+                "form_id": "223-Alangulam Landscape Survey 05-2025",
+                "project_id": 10
+            },
+            "44-Anaikattu": {
+                "form_id": "44-Anaikattu Landscape Survey 05-2025",
+                "project_id": 10
+            },
+            "81-Gangavalli (SC)": {
+                "form_id": "81-Gangavalli (SC) Landscape Survey 05-2025",
+                "project_id": 10
+            }
         }
     }
 }
 
+def fetch_all_submissions(server, project_id, form_id):
+    """Fetch all submissions without date filtering"""
+    config = ODK_CONFIG.get(server, {})
+    base_url = config.get("BASE_URL", "")
+    username = config.get("USERNAME", "")
+    password = config.get("PASSWORD", "")
 
-# Fetch data from ODK
-@st.cache_data(ttl=60, show_spinner="Fetching data from ODK...")
-def get_odk_data(server_url, project_id, form_id):
-    """Fetch all submission data from ODK Central with pagination and retries"""
-    logger.info(f"Fetching data for form {form_id} in project {project_id}")
+    url = f"{base_url}/v1/projects/{project_id}/forms/{urllib.parse.quote(form_id)}.svc/Submissions"
+    all_data = []
+    skip = 0
+    batch_size = 500
+
     try:
-        form_url = f"{server_url}/v1/projects/{project_id}/forms/{urllib.parse.quote(form_id)}.svc"
-        submissions_url = f"{form_url}/Submissions"
-        all_data = []
-        params = {"$top": 100}
-        skip = 0
-        max_retries = 3
-
         while True:
-            for attempt in range(max_retries):
-                try:
-                    response = requests.get(
-                        submissions_url,
-                        auth=HTTPBasicAuth(ODK_USERNAME, ODK_PASSWORD),
-                        headers={"Accept": "application/json"},
-                        params={**params, "$skip": skip},
-                        timeout=60
-                    )
-                    response.raise_for_status()
-                    data = response.json()
-                    submissions = data.get('value', [])
-                    logger.info(f"Fetched {len(submissions)} submissions, skip={skip}, total so far: {len(all_data)}")
-                    all_data.extend(submissions)
-                    skip += len(submissions)
-                    if len(submissions) < 100:
-                        logger.info(f"Total submissions fetched for {form_id}: {len(all_data)}")
-                        return all_data
-                    break
-                except requests.exceptions.RequestException as e:
-                    if attempt < max_retries - 1:
-                        logger.warning(f"Retry {attempt+1}/{max_retries} for {form_id}: {str(e)}")
-                        time.sleep(2 ** attempt)
-                        continue
-                    logger.error(f"Failed to fetch data for {form_id} after {max_retries} retries: {str(e)}")
-                    raise
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404:
-            logger.warning(f"Form {form_id} not found in project {project_id} on {server_url}")
-            st.warning(f"Form {form_id} not found in project {project_id}. Please verify the form ID and project ID.")
-        else:
-            logger.error(f"HTTP error fetching data for {form_id}: {str(e)}")
-            st.error(f"Error fetching data for {form_id}: {str(e)}")
-        return []
+            params = {"$top": batch_size, "$skip": skip}
+            response = requests.get(
+                url,
+                auth=HTTPBasicAuth(username, password),
+                params=params,
+                timeout=60
+            )
+            response.raise_for_status()
+            data = response.json()
+            submissions = data.get('value', [])
+
+            if not submissions:
+                break
+
+            all_data.extend(submissions)
+            skip += len(submissions)
+
+            if len(submissions) < batch_size:
+                break
+
     except Exception as e:
-        logger.error(f"Unexpected error fetching data for {form_id}: {str(e)}")
-        st.error(f"Error fetching data for {form_id}: {str(e)}")
+        logger.error(f"Error fetching submissions for form {form_id}: {str(e)}")
         return []
 
-# Parse date
-def parse_date(date_str, fallback_str=None):
-    """Parse various date formats and return YYYY-MM-DD"""
-    if not date_str or date_str == "Unknown" or not isinstance(date_str, str):
-        if fallback_str and isinstance(fallback_str, str):
-            date_str = fallback_str
-        else:
-            logger.warning(f"Invalid date string: {date_str}, no valid fallback")
-            return "Unknown"
+    return all_data
 
-    try:
-        # Try common formats
-        for fmt in ["%Y/%m/%d %H:%M:%S", "%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%d %H:%M:%S"]:
-            try:
-                parsed_date = datetime.strptime(date_str, fmt)
-                return parsed_date.strftime("%Y-%m-%d")
-            except ValueError:
-                continue
-        # Fallback to dateutil parser
-        date_str = re.sub(r'[Z+].*', '', date_str).strip()
-        parsed_date = parser.parse(date_str, ignoretz=True)
-        return parsed_date.strftime("%Y-%m-%d")
-    except Exception as e:
-        logger.warning(f"Failed to parse date {date_str}: {str(e)}")
-        if fallback_str and isinstance(fallback_str, str) and fallback_str != date_str:
-            return parse_date(fallback_str, None)
-        return "Unknown"
-
-# Download and validate audio files
-def download_and_validate_audio_files(server_url, project_id, form_id, audio_submissions):
-    """Download audio files and validate their duration (≥ 8 minutes)"""
-    zip_buffer = BytesIO()
-    audio_summary = []
-    MIN_DURATION_SECONDS = 8 * 60  # 8 minutes in seconds
-
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        for i, (_, row) in enumerate(audio_submissions.iterrows()):
-            audio_file = row['Audio File']
-            instance_id = row['instanceID']
-            submitted_by = row['Submitted By'] if pd.notnull(row['Submitted By']) else 'unknown'
-            clean_name = row['SubmittedBy_AudioFile']
-
-            with st.spinner(f"Processing {i+1}/{len(audio_submissions)}: {clean_name}..."):
-                try:
-                    audio_url = f"{server_url}/v1/projects/{project_id}/forms/{urllib.parse.quote(form_id)}/submissions/{instance_id}/attachments/{audio_file}"
-                    audio_response = requests.get(
-                        audio_url,
-                        auth=HTTPBasicAuth(ODK_USERNAME, ODK_PASSWORD),
-                        timeout=30
-                    )
-                    audio_response.raise_for_status()
-
-                    # Calculate audio duration
-                    audio_buffer = BytesIO(audio_response.content)
-                    audio = AudioSegment.from_file(audio_buffer)
-                    duration_seconds = len(audio) / 1000  # Convert milliseconds to seconds
-                    duration_formatted = f"{int(duration_seconds // 60)}:{int(duration_seconds % 60):02d}"
-                    status = "Valid" if duration_seconds >= MIN_DURATION_SECONDS else "Invalid"
-
-                    # Include in ZIP only if valid
-                    if status == "Valid":
-                        zip_file.writestr(clean_name, audio_response.content)
-
-                    audio_summary.append({
-                        "File": clean_name,
-                        "Duration (MM:SS)": duration_formatted,
-                        "Status": status,
-                        "instanceID": instance_id
-                    })
-
-                except requests.exceptions.RequestException as e:
-                    audio_summary.append({
-                        "File": clean_name,
-                        "Duration (MM:SS)": "N/A",
-                        "Status": "Error",
-                        "instanceID": instance_id
-                    })
-                    logger.error(f"Server error for {audio_file}: {str(e)}")
-                except Exception as e:
-                    audio_summary.append({
-                        "File": clean_name,
-                        "Duration (MM:SS)": "N/A",
-                        "Status": "Error",
-                        "instanceID": instance_id
-                    })
-                    logger.error(f"Unexpected error for {audio_file}: {str(e)}")
-
-    zip_buffer.seek(0)
-    summary_df = pd.DataFrame(audio_summary)
-    return zip_buffer, summary_df
-
-# Process submissions
-def process_submissions(submissions, form_name, server_url, project_id, form_id):
+def process_submissions(submissions, form_name, project_id, form_id, server_path, project_name, survey_name):
+    """Process submissions with specified fields"""
     if not submissions:
-        logger.warning("No submissions provided to process.")
+        logger.warning(f"No submissions provided for form {form_name}.")
         return None
+
+    # Debug: Log the input values
+    logger.info(f"process_submissions: server_path={repr(server_path)}, project_name={repr(project_name)}, survey_name={repr(survey_name)}")
+
     df = pd.DataFrame(submissions)
-    logger.info(f"Processing {len(df)} submissions for form {form_name}")
 
-    def extract_group_six_field(row, field_name):
-        value = None
-        group_six = row.get('group_six')
-        if isinstance(group_six, str):
-            try:
-                group_six_data = json.loads(group_six)
-                value = group_six_data.get(field_name)
-            except json.JSONDecodeError:
-                pass
-        elif isinstance(group_six, dict):
-            value = group_six.get(field_name)
-        if value:
-            value = str(value).lower().replace(' ', '')
-            if field_name == 'D3_Gender':
-                value = value.replace('gender.', '')
-            elif field_name == 'D4_Age':
-                value = value.replace('age.', '')
-            elif field_name == 'D5_Caste':
-                value = value.replace('caste.', '')
-        return value
+    # Handle submission IDs
+    id_col = 'instanceID' if 'instanceID' in df.columns else '__id'
 
-    def extract_geopoint_data(row):
-        group_six = row.get('group_six')
-        lat, lon = None, None
-        error_reason = None
-        try:
-            if isinstance(group_six, str):
-                group_six_data = json.loads(group_six)
-            elif isinstance(group_six, dict):
-                group_six_data = group_six
-            else:
-                return None, None, "No group_six data"
-            geopoint = group_six_data.get('geopoint_widget')
-            if not geopoint or not isinstance(geopoint, dict):
-                return None, None, "Invalid geopoint_widget"
-            coordinates = geopoint.get('coordinates')
-            if not coordinates or len(coordinates) < 2:
-                return None, None, "Missing coordinates"
-            lon, lat = coordinates[0], coordinates[1]
-            if lat is None or lon is None:
-                return None, None, "Null coordinates"
-            lat = float(lat)
-            lon = float(lon)
-            if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-                return None, None, f"Out-of-range: lat={lat}, lon={lon}"
-            return lat, lon, None
-        except Exception as e:
-            return None, None, f"Error: {str(e)}"
-
-    # Extract fields
-    df['instanceID'] = df.get("instanceID", df.get("__id", "Unknown"))
+    # Basic info
     df['Form Name'] = form_name
-    df['Submitted By'] = df.apply(lambda row: extract_group_six_field(row, 'submittedBy'), axis=1)
-    df['Gender'] = df.apply(lambda row: extract_group_six_field(row, 'D3_Gender'), axis=1)
-    df['Age'] = df.apply(lambda row: extract_group_six_field(row, 'D4_Age'), axis=1)
-    df['Caste'] = df.apply(lambda row: extract_group_six_field(row, 'D5_Caste'), axis=1)
-    df['Block'] = df.apply(lambda row: extract_group_six_field(row, 'D1_Block'), axis=1)
-    df['Village'] = df.apply(lambda row: extract_group_six_field(row, 'D2_Village_GP'), axis=1)
-    df['Name'] = df.apply(lambda row: extract_group_six_field(row, 'D7_Name'), axis=1)
-    df['Phone Number'] = df.apply(lambda row: extract_group_six_field(row, 'D8_PhoneNumber'), axis=1)
+    df['instanceID'] = df[id_col]
+    df['Date'] = df['__system'].apply(
+        lambda x: parser.parse(x['submissionDate']).date() if isinstance(x, dict) else None
+    )
 
-    # Geolocation
-    df['Latitude'], df['Longitude'], df['GeoError'] = zip(*df.apply(extract_geopoint_data, axis=1))
-    df['Location Present'] = df.apply(lambda row: "✅" if row['Latitude'] and row['Longitude'] else "❌", axis=1)
+    # Extract fields from group_six
+    def extract_field(row, field):
+        g6 = row.get('group_six', {})
+        if isinstance(g6, str):
+            try:
+                g6 = json.loads(g6)
+            except Exception as e:
+                logger.warning(f"Error parsing group_six JSON: {str(e)}")
+                g6 = {}
+        logger.info(f"group_six content: {g6}")  # Debugging line
+        return str(g6.get(field, 'Field not available')).strip()
 
-    # Audio
-    df['Audio File'] = df.get("bg_audio", "Unknown")
+    # Required fields
+    df['Name'] = df.apply(lambda r: extract_field(r, 'D1_Name'), axis=1)
+    df['D7_Name'] = df.apply(lambda r: extract_field(r, 'D7_Name'), axis=1)  # Add D7_Name field
+    df['Submitted By'] = df.apply(lambda r: extract_field(r, 'submittedBy'), axis=1)
+    df['Phone Number'] = df.apply(lambda r: extract_field(r, 'D8_PhoneNumber'), axis=1)
+
+    # New column to indicate if Phone Number is present
+    df['Phone Number Present'] = df['Phone Number'].apply(lambda x: "✅" if x and x.strip() else "❌")
+
+    # Audio files
+    df['Audio File'] = df.get('bg_audio', 'Unknown')
     df['Audio Present'] = df['Audio File'].apply(lambda x: "✅" if x and x != "Unknown" else "❌")
 
-    # Combine Submitted By and Audio File
-    df['SubmittedBy_AudioFile'] = df.apply(
-        lambda row: f"{row['Submitted By']}_{row['Audio File']}".replace(" ", "_").replace("/", "_").replace("\\", "_")
-        if row['Audio Present'] == "✅" and pd.notnull(row['Submitted By']) else "N/A",
+    # Location data
+    def extract_location(row):
+        try:
+            g6 = row.get('group_six', {})
+            if isinstance(g6, str):
+                try:
+                    g6 = json.loads(g6)
+                except:
+                    g6 = {}
+            geo = g6.get('geopoint_widget', {}) if isinstance(g6, dict) else {}
+            if isinstance(geo, dict):
+                coords = geo.get('coordinates', [None, None])
+            else:
+                coords = [None, None]
+            if isinstance(coords, (list, tuple)) and len(coords) >= 2:
+                return float(coords[1]) if coords[1] is not None else None, \
+                       float(coords[0]) if coords[0] is not None else None
+            return None, None
+        except Exception as e:
+            logger.warning(f"Error extracting location: {str(e)}")
+            return None, None
+
+    df['Latitude'], df['Longitude'] = zip(*df.apply(extract_location, axis=1))
+    df['Location Present'] = df.apply(
+        lambda r: "✅" if pd.notna(r['Latitude']) and pd.notna(r['Longitude']) else "❌",
         axis=1
     )
-    df['Custom_Concatenated'] = df['SubmittedBy_AudioFile']
 
-    # Log to confirm column presence
-    logger.info(f"Columns after adding Custom_Concatenated: {list(df.columns)}")
+    # Required columns
+    required_columns = [
+        'Form Name', 'Date', 'Audio File', 'Audio Present', 'Location Present',
+        'Submitted By', 'Name', 'D7_Name', 'Phone Number', 'Phone Number Present', 'instanceID'
+    ]
 
-    # Date and duration
-    df['Date'] = "Unknown"
-    df['Interview Length (min)'] = 0.0
-
-    if 'start' in df.columns and 'end' in df.columns:
-        try:
-            df['submission_datetime'] = df['start'].apply(
-                lambda x: pd.to_datetime(x, errors='coerce')
-            )
-            df['end_datetime'] = df['end'].apply(
-                lambda x: pd.to_datetime(x, errors='coerce')
-            )
-            df['submission_datetime'] = df.apply(
-                lambda row: pd.to_datetime(row['__system'].get('submissionDate'), errors='coerce')
-                if pd.isna(row['submission_datetime']) and isinstance(row.get('__system'), dict)
-                else row['submission_datetime'],
-                axis=1
-            )
-            df['Date'] = df['submission_datetime'].apply(
-                lambda x: x.strftime('%Y-%m-%d') if pd.notnull(x) else "Unknown"
-            )
-            df['Interview Length (min)'] = df.apply(
-                lambda row: (row['end_datetime'] - row['submission_datetime']).total_seconds() / 60.0
-                if pd.notnull(row['submission_datetime']) and pd.notnull(row['end_datetime'])
-                else 0.0,
-                axis=1
-            )
-        except Exception as e:
-            logger.error(f"Error processing dates: {str(e)}")
-            st.warning(f"Date processing failed: {str(e)}")
-    else:
-        logger.warning(f"Missing columns: {'start' if 'start' not in df.columns else ''}, {'end' if 'end' not in df.columns else ''}")
-        if '__system' in df.columns:
-            df['submission_datetime'] = df['__system'].apply(
-                lambda x: pd.to_datetime(x.get('submissionDate'), errors='coerce') if isinstance(x, dict) else pd.NaT
-            )
-            df['Date'] = df['submission_datetime'].apply(
-                lambda x: x.strftime('%Y-%m-%d') if pd.notnull(x) else "Unknown"
-            )
-
-    # Age grouping
-    df['Age'] = pd.to_numeric(df['Age'], errors='coerce')
-    if df['Age'].notna().any():
-        age_bins = [18, 25, 35, 45, 55, float('inf')]
-        age_labels = ['18-25', '26-35', '36-45', '46-55', '56+']
-        df['Age Group'] = pd.cut(df['Age'], bins=age_bins, labels=age_labels, include_lowest=True, right=False)
-    else:
-        df['Age Group'] = None
-
-    # Duration grouping
-    duration_bins = [0, 5, 10, 15, 20, float('inf')]
-    duration_labels = ['0-5 min', '5-10 min', '10-15 min', '15-20 min', '20+ min']
-    df['Duration Group'] = pd.cut(df['Interview Length (min)'], bins=duration_bins, labels=duration_labels, include_lowest=True, right=False)
-
-    # Initialize audio duration and validity columns
-    df['Audio Duration (MM:SS)'] = "N/A"
-    df['Audio Validity'] = "N/A"
-
-    # Select columns
+    # Ensure all columns exist
     for col in required_columns:
         if col not in df.columns:
             df[col] = None
-            logger.warning(f"Column {col} was missing, added with None values")
-    df = df[required_columns]
-    logger.info(f"Final DataFrame columns: {list(df.columns)}")
-    return df
 
-# Create Excel for project
-def create_excel_for_project(server_name, project_name, forms_data):
-    """Create Excel file for a specific project"""
-    excel_buffer = BytesIO()
-    with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
-        for form_name, form_info in forms_data.items():
-            server_url = "https://tnodk01.indiaintentions.com" if server_name == "Server 1" else "https://tnodk02.indiaintentions.com" if server_name == "Server 2" else "https://tnodk03.indiaintentions.com"
-            raw_data = get_odk_data(server_url, form_info['project_id'], form_info['form_id'])
+    return df[required_columns]
 
-            if not raw_data:
-                continue
+def sanitize_sheet_name(name):
+    """Sanitize form name to be a valid Excel sheet name"""
+    # Remove invalid characters and replace with underscore
+    invalid_chars = r'[\\\/:*?\[\]]'
+    sanitized = re.sub(invalid_chars, '_', name)
+    # Truncate to 31 characters (Excel limit)
+    sanitized = sanitized[:31]
+    # Remove leading/trailing underscores
+    sanitized = sanitized.strip('_')
+    # If empty after sanitization, use a default name
+    return sanitized if sanitized else "Sheet"
 
-            df = process_submissions(raw_data, form_name, server_url, form_info['project_id'], form_info['form_id'])
-            if df is None or df.empty:
-                continue
+def main():
+    st.set_page_config(page_title="ODK Data Processor", layout="wide")
+    st.title("📊 ODK Form Data Processor")
 
-            # Use the entire DataFrame without date filtering
-            filtered_df = df
+    # Initialize session state for selections
+    if 'server_path' not in st.session_state:
+        st.session_state.server_path = list(SURVEYS.keys())[0]
+    if 'selected_project' not in st.session_state:
+        st.session_state.selected_project = None
 
-            # Add validation column
-            filtered_df['Is Valid'] = filtered_df.apply(
-                lambda row: row['Audio Present'] == "✅" and row['Location Present'] == "✅" and row['Audio Validity'] == "Valid",
-                axis=1
-            )
+    # Sidebar controls
+    st.sidebar.header("Filters")
 
-            # Calculate stats
-            total_submissions = len(filtered_df)
-            total_valid = filtered_df['Is Valid'].sum()
-            total_invalid = total_submissions - total_valid
-            validation_rate = (total_valid / total_submissions * 100) if total_submissions > 0 else 0
+    # Server selection
+    server_path = st.sidebar.selectbox("Server", list(SURVEYS.keys()), index=0, key="server_path_select")
 
-            # Submissions by person with validation
-            submitter_stats = filtered_df.groupby('Submitted By').agg(
-                Submission_Count=('Submitted By', 'size'),
-                Valid_Count=('Is Valid', 'sum'),
-                Avg_Length=('Interview Length (min)', 'mean')
-            ).reset_index()
-            submitter_stats['Invalid_Count'] = submitter_stats['Submission_Count'] - submitter_stats['Valid_Count']
-            submitter_stats['Validation_Rate'] = (submitter_stats['Valid_Count'] / submitter_stats['Submission_Count'] * 100).round(1)
-            submitter_stats['Avg_Length'] = submitter_stats['Avg_Length'].round(2)
+    # Reset project if server changes
+    if server_path != st.session_state.server_path:
+        st.session_state.server_path = server_path
+        st.session_state.selected_project = None
 
-            # Create summary sheet
-            submitter_stats.to_excel(writer, index=False, sheet_name=f"{form_name[:28]}_Stats")
+    # Project selection
+    if server_path in SURVEYS:
+        project_options = list(SURVEYS[server_path].keys())
+        if not st.session_state.selected_project or st.session_state.selected_project not in project_options:
+            st.session_state.selected_project = project_options[0]
+        selected_project = st.sidebar.selectbox("Project", project_options, index=project_options.index(st.session_state.selected_project), key="project_select")
+    else:
+        st.error("Invalid server selected.")
+        return
 
-            # Original data with validation
-            summary_row = pd.DataFrame([{
-                'Form Name': 'SUMMARY STATS',
-                'Date': '',
-                'Audio File': '',
-                'Audio Present': '',
-                'Location Present': '',
-                'Name': '',
-                'Gender': '',
-                'Age': '',
-                'Age Group': '',
-                'Caste': '',
-                'Block': '',
-                'Village': '',
-                'Submitted By': f'Total: {total_submissions} | Valid: {total_valid} ({validation_rate:.1f}%)',
-                'Phone Number': '',
-                'Interview Length (min)': '',
-                'Duration Group': '',
-                'Latitude': '',
-                'Longitude': '',
-                'instanceID': '',
-                'SubmittedBy_AudioFile': '',
-                'Custom_Concatenated': '',
-                'Audio Duration (MM:SS)': '',
-                'Audio Validity': '',
-                'Is Valid': ''
-            }])
-            final_df = pd.concat([summary_row, filtered_df], ignore_index=True)
-            final_df.to_excel(writer, index=False, sheet_name=form_name[:31])
+    # Normalize selections to avoid whitespace issues
+    server_path = server_path.strip()
+    selected_project = selected_project.strip()
 
-            workbook = writer.book
-            worksheet = writer.sheets[form_name[:31]]
-            header_format = workbook.add_format({
-                'bold': True,
-                'text_wrap': True,
-                'valign': 'top',
-                'fg_color': '#D7E4BC',
-                'border': 1
-            })
-            for col_num, value in enumerate(final_df.columns.values):
-                worksheet.write(0, col_num, value, header_format)
-            summary_format = workbook.add_format({
-                'bold': True,
-                'bg_color': '#FFFF00'
-            })
-            worksheet.set_row(1, None, summary_format)
-            for i, col in enumerate(final_df.columns):
-                max_len = max(
-                    final_df[col].astype(str).map(len).max(),
-                    len(col)
-                ) + 2
-                worksheet.set_column(i, i, max_len)
+    # Debug: Log selected values
+    st.write(f"Selected Values: server_path={repr(server_path)}, project={repr(selected_project)}")
 
-    return excel_buffer
+    # Initialize session state for data
+    if 'df' not in st.session_state:
+        st.session_state.df = None
+    if 'form_dfs' not in st.session_state:
+        st.session_state.form_dfs = {}
 
-# Streamlit App
-st.set_page_config(page_title="server2 Data Filtering", layout="wide")
-st.title("📊 ODK Form Data Processor - Multi-Project")
+    # Main content
+    if st.button("Load All Forms in Project"):
+        with st.spinner(f"Fetching all submissions for project {selected_project}..."):
+            all_dfs = []
+            form_dfs = {}
+            form_options = list(SURVEYS[server_path][selected_project].keys())
 
-st.markdown("""
-<style>
-    .stDataFrame {width: 100% !important;}
-    .submission-stats {background-color: #f0f2f6; padding: 15px; border-radius: 10px; margin-bottom: 20px;}
-    .stat-card {background-color: white; border-radius: 5px; padding: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);}
-    .valid-badge {background-color: #4CAF50; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px;}
-    .invalid-badge {background-color: #F44336; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px;}
-</style>
-""", unsafe_allow_html=True)
-
-# Main UI
-st.sidebar.header("Data Controls")
-
-selected_server = st.sidebar.selectbox("Select Server", list(forms.keys()), key="server_selectbox")
-
-if selected_server:
-    projects = forms[selected_server]
-    selected_project = st.sidebar.selectbox("Select Project", list(projects.keys()), key="project_selectbox")
-
-    if selected_project:
-        project_forms = projects[selected_project]
-
-        if st.sidebar.button("Download All Forms in Project", key="download_project_button"):
-            with st.spinner(f"Processing {selected_project}..."):
-                excel_buffer = create_excel_for_project(selected_server, selected_project, project_forms)
-                excel_buffer.seek(0)
-                st.sidebar.download_button(
-                    label="⬇️ Download Project Excel",
-                    data=excel_buffer,
-                    file_name=f"{selected_project.replace(' ', '_')}_submissions.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key="download_project_excel"
+            for form_name in form_options:
+                form_info = SURVEYS[server_path][selected_project][form_name]
+                submissions = fetch_all_submissions(
+                    server_path,
+                    form_info['project_id'],
+                    form_info['form_id']
                 )
 
-        selected_form = st.sidebar.selectbox("Select Form", list(project_forms.keys()), key="form_selectbox")
-        if selected_form:
-            form_info = project_forms[selected_form]
-            server_url = "https://tnodk01.indiaintentions.com" if selected_server == "Server 1" else "https://tnodk02.indiaintentions.com" if selected_server == "Server 2" else "https://tnodk03.indiaintentions.com"
-
-            # Load data from ODK
-            with st.spinner(f"Loading {selected_form} data from ODK..."):
-                raw_data = get_odk_data(server_url, form_info['project_id'], form_info['form_id'])
-                if raw_data:
-                    df = process_submissions(raw_data, selected_form, server_url, form_info['project_id'], form_info['form_id'])
-                    if df is not None and not df.empty:
-                        st.session_state[f'data_{selected_form}'] = df
-                        logger.info(f"Stored new DataFrame in session state with columns: {list(df.columns)}")
+                if submissions:
+                    df = process_submissions(
+                        submissions,
+                        form_name,
+                        form_info['project_id'],
+                        form_info['form_id'],
+                        server_path,
+                        selected_project,
+                        form_name
+                    )
+                    if df is not None:
+                        all_dfs.append(df)
+                        form_dfs[form_name] = df
                     else:
-                        logger.warning(f"No valid data processed for {selected_form}")
-
-            # Display data
-            if df is not None and not df.empty:
-                if 'Date' not in df.columns:
-                    st.error("The 'Date' column is missing in the processed data.")
-                    logger.error("Missing 'Date' column in DataFrame")
-                    st.stop()
-
-                # Use the entire DataFrame without date filtering
-                filtered_df = df
-                logger.info(f"DataFrame columns for {selected_form}: {list(filtered_df.columns)}")
-
-                if not filtered_df.empty:
-                    # Process audio files for duration validation
-                    audio_submissions = filtered_df[filtered_df['Audio Present'] == "✅"]
-                    audio_summary_df = pd.DataFrame()
-                    zip_buffer = None
-
-                    if not audio_submissions.empty and st.button("🚀 Process and Download Valid Audio Files", key="download_audio_button"):
-                        with st.spinner(f"Processing audio files for {selected_form}..."):
-                            zip_buffer, audio_summary_df = download_and_validate_audio_files(
-                                server_url, form_info['project_id'], form_info['form_id'], audio_submissions
-                            )
-
-                        if zip_buffer.getbuffer().nbytes > 0:
-                            st.success(f"🎉 Processing completed! Only valid audio files (≥ 8 min) included in ZIP.")
-                            st.download_button(
-                                label=f"⬇️ Download Valid Audio Files (ZIP)",
-                                data=zip_buffer,
-                                file_name=f"{selected_form.replace(' ', '_')}_VALID_AUDIOS.zip",
-                                mime="application/zip",
-                                key="download_audio_zip"
-                            )
-                        else:
-                            st.error("No valid audio files were found or processed.")
-
-                        # Update filtered_df with audio duration and validity
-                        if not audio_summary_df.empty:
-                            audio_summary_df.set_index('instanceID', inplace=True)
-                            filtered_df = filtered_df.copy()
-                            filtered_df['Audio Duration (MM:SS)'] = filtered_df['instanceID'].map(
-                                audio_summary_df['Duration (MM:SS)']
-                            ).fillna("N/A")
-                            filtered_df['Audio Validity'] = filtered_df['instanceID'].map(
-                                audio_summary_df['Status']
-                            ).fillna("N/A")
-
-                    # Add validation column
-                    filtered_df['Is Valid'] = filtered_df.apply(
-                        lambda row: row['Audio Present'] == "✅" and row['Location Present'] == "✅" and row['Audio Validity'] == "Valid",
-                        axis=1
-                    )
-
-                    # Calculate validation stats
-                    total_submissions = len(filtered_df)
-                    total_valid = filtered_df['Is Valid'].sum()
-                    total_invalid = total_submissions - total_valid
-                    validation_rate = (total_valid / total_submissions * 100) if total_submissions > 0 else 0
-
-                    # Submissions by person with validation
-                    submitter_stats = filtered_df.groupby('Submitted By').agg(
-                        Submission_Count=('Submitted By', 'size'),
-                        Valid_Count=('Is Valid', 'sum'),
-                        Avg_Length=('Interview Length (min)', 'mean')
-                    ).reset_index()
-                    submitter_stats['Invalid_Count'] = submitter_stats['Submission_Count'] - submitter_stats['Valid_Count']
-                    submitter_stats['Validation_Rate'] = (submitter_stats['Valid_Count'] / submitter_stats['Submission_Count'] * 100).round(1)
-                    submitter_stats['Avg_Length'] = submitter_stats['Avg_Length'].round(2)
-
-                    # Display validation summary
-                    st.markdown("""
-                    <div class="submission-stats">
-                        <h3>📊 Submission Validation Summary</h3>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    col1, col2, col3 = st.columns(3)
-
-                    with col1:
-                        st.markdown(f"""
-                        <div class="stat-card">
-                            <h4>✅ Valid Submissions</h4>
-                            <p style="font-size: 24px; font-weight: bold; color: #4CAF50;">{total_valid}</p>
-                            <p>{validation_rate:.1f}% of total</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                    with col2:
-                        st.markdown(f"""
-                        <div class="stat-card">
-                            <h4>❌ Invalid Submissions</h4>
-                            <p style="font-size: 24px; font-weight: bold; color: #F44336;">{total_invalid}</p>
-                            <p>{(100 - validation_rate):.1f}% of total</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                    with col3:
-                        avg_length = filtered_df['Interview Length (min)'].mean()
-                        st.markdown(f"""
-                        <div class="stat-card">
-                            <h4>⏱️ Average Length</h4>
-                            <p style="font-size: 24px; font-weight: bold; color: #2196F3;">{avg_length:.1f} min</p>
-                            <p>across all submissions</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                    # Submissions by person
-                    st.markdown("""
-                    <div class="submission-stats">
-                        <h3>👥 Submissions by Person</h3>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    st.dataframe(
-                        submitter_stats.sort_values('Submission_Count', ascending=False),
-                        use_container_width=True,
-                        hide_index=True,
-                        column_order=['Submitted By', 'Submission_Count', 'Valid_Count', 'Invalid_Count', 'Validation_Rate', 'Avg_Length'],
-                        column_config={
-                            'Submitted By': 'Submitted By',
-                            'Submission_Count': st.column_config.NumberColumn('Total Submissions'),
-                            'Valid_Count': st.column_config.NumberColumn('✅ Valid'),
-                            'Invalid_Count': st.column_config.NumberColumn('❌ Invalid'),
-                            'Validation_Rate': st.column_config.NumberColumn('Validation %', format="%.1f%%"),
-                            'Avg_Length': st.column_config.NumberColumn('Avg Length (min)')
-                        }
-                    )
-
-                    # Audio files summary
-                    if not audio_summary_df.empty:
-                        st.markdown("""
-                        <div class="submission-stats">
-                            <h3>🎵 Audio Files Summary</h3>
-                            <p>Valid: Duration ≥ 8 minutes, Invalid: Duration < 8 minutes</p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        st.dataframe(
-                            audio_summary_df[['File', 'Duration (MM:SS)', 'Status']],
-                            use_container_width=True,
-                            column_config={
-                                'File': 'Audio File',
-                                'Duration (MM:SS)': 'Duration',
-                                'Status': st.column_config.TextColumn('Validity')
-                            }
-                        )
-
-                    # Main data display
-                    st.markdown(f"""
-                    <div class="submission-stats">
-                        <h3>📋 Form Data - {selected_form}</h3>
-                        <p><strong>Total Submissions:</strong> {total_submissions} |
-                        <strong>Valid Submissions:</strong> <span class="valid-badge">{total_valid}</span> |
-                        <strong>Invalid Submissions:</strong> <span class="invalid-badge">{total_invalid}</span></p>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    # Display the main data with validation column
-                    display_columns = required_columns + ['Is Valid']
-                    display_df = filtered_df[display_columns]
-                    st.dataframe(
-                        display_df,
-                        use_container_width=True,
-                        column_config={
-                            'Is Valid': st.column_config.CheckboxColumn(
-                                "Is Valid",
-                                help="Whether the submission has both audio, location data, and valid audio duration (≥ 8 min)",
-                                default=False,
-                            ),
-                            'Audio Validity': st.column_config.TextColumn(
-                                "Audio Validity",
-                                help="Valid if audio duration is ≥ 8 minutes, Invalid if < 8 minutes"
-                            )
-                        }
-                    )
-
-                    # Prepare Excel with validation data
-                    excel_buffer = BytesIO()
-                    with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
-                        # Write validation summary
-                        validation_summary = pd.DataFrame({
-                            'Metric': ['Total Submissions', 'Valid Submissions', 'Invalid Submissions', 'Validation Rate'],
-                            'Value': [total_submissions, total_valid, total_invalid, f"{validation_rate:.1f}%"]
-                        })
-                        validation_summary.to_excel(writer, index=False, sheet_name="Validation Summary")
-
-                        # Write audio summary
-                        if not audio_summary_df.empty:
-                            audio_summary_df[['File', 'Duration (MM:SS)', 'Status']].to_excel(
-                                writer, index=False, sheet_name="Audio Summary"
-                            )
-
-                        # Write submitter stats
-                        submitter_stats.to_excel(writer, index=False, sheet_name="Submissions by Person")
-
-                        # Write data sheet
-                        summary_row = pd.DataFrame([{
-                            'Form Name': 'SUMMARY STATS',
-                            'Date': '',
-                            'Audio File': '',
-                            'Audio Present': '',
-                            'Location Present': '',
-                            'Name': '',
-                            'Gender': '',
-                            'Age': '',
-                            'Age Group': '',
-                            'Caste': '',
-                            'Block': '',
-                            'Village': '',
-                            'Submitted By': f'Total: {total_submissions} | Valid: {total_valid} ({validation_rate:.1f}%)',
-                            'Phone Number': '',
-                            'Interview Length (min)': '',
-                            'Duration Group': '',
-                            'Latitude': '',
-                            'Longitude': '',
-                            'instanceID': '',
-                            'SubmittedBy_AudioFile': '',
-                            'Custom_Concatenated': '',
-                            'Audio Duration (MM:SS)': '',
-                            'Audio Validity': '',
-                            'Is Valid': ''
-                        }])
-                        final_df = pd.concat([summary_row, filtered_df], ignore_index=True)
-                        final_df.to_excel(writer, index=False, sheet_name="Form Data")
-
-                        # Formatting
-                        workbook = writer.book
-
-                        # Format validation summary
-                        worksheet_validation = writer.sheets["Validation Summary"]
-                        header_format = workbook.add_format({
-                            'bold': True,
-                            'text_wrap': True,
-                            'valign': 'top',
-                            'fg_color': '#D7E4BC',
-                            'border': 1
-                        })
-                        for col_num, value in enumerate(validation_summary.columns.values):
-                            worksheet_validation.write(0, col_num, value, header_format)
-
-                        # Format audio summary
-                        if not audio_summary_df.empty:
-                            worksheet_audio = writer.sheets["Audio Summary"]
-                            for col_num, value in enumerate(audio_summary_df[['File', 'Duration (MM:SS)', 'Status']].columns.values):
-                                worksheet_audio.write(0, col_num, value, header_format)
-
-                        # Format submitter stats
-                        worksheet_submitters = writer.sheets["Submissions by Person"]
-                        for col_num, value in enumerate(submitter_stats.columns.values):
-                            worksheet_submitters.write(0, col_num, value, header_format)
-
-                        # Format data sheet
-                        worksheet_data = writer.sheets["Form Data"]
-                        for col_num, value in enumerate(final_df.columns.values):
-                            worksheet_data.write(0, col_num, value, header_format)
-                        summary_format = workbook.add_format({
-                            'bold': True,
-                            'bg_color': '#FFFF00'
-                        })
-                        worksheet_data.set_row(1, None, summary_format)
-
-                        # Auto-adjust column widths
-                        for worksheet in [worksheet_validation, worksheet_submitters, worksheet_data] + ([writer.sheets["Audio Summary"]] if not audio_summary_df.empty else []):
-                            for i, col in enumerate(validation_summary.columns if worksheet == worksheet_validation
-                                              else submitter_stats.columns if worksheet == worksheet_submitters
-                                              else audio_summary_df[['File', 'Duration (MM:SS)', 'Status']].columns if worksheet == writer.sheets.get("Audio Summary")
-                                              else final_df.columns):
-                                max_len = max(
-                                    (validation_summary[col] if worksheet == worksheet_validation
-                                     else submitter_stats[col] if worksheet == worksheet_submitters
-                                     else audio_summary_df[col] if worksheet == writer.sheets.get("Audio Summary")
-                                     else final_df[col]).astype(str).map(len).max(),
-                                    len(col)
-                                ) + 2
-                                worksheet.set_column(i, i, max_len)
-
-                    excel_buffer.seek(0)
-                    st.download_button(
-                        label="⬇️ Download with Validation Data",
-                        data=excel_buffer,
-                        file_name=f"{selected_form.replace(' ', '_')}_submissions_with_validation.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key="download_form_excel"
-                    )
+                        st.warning(f"No submissions found for form {form_name}")
                 else:
-                    st.warning(f"No submissions found for {selected_form}.")
+                    st.error(f"Failed to fetch submissions for form {form_name}")
+
+            if all_dfs:
+                combined_df = pd.concat(all_dfs, ignore_index=True)
+                st.session_state.df = combined_df
+                st.session_state.form_dfs = form_dfs
+                st.success(f"Loaded {len(combined_df)} submissions from {len(all_dfs)} forms")
             else:
-                st.warning(f"No data found for {selected_form}")
+                st.warning("No submissions found for any forms in this project")
 
-# Run the Streamlit app
+    # Display data
+    if st.session_state.df is not None:
+        st.subheader("All Submission Data")
+        st.dataframe(st.session_state.df)
+
+        # Export
+        st.subheader("Data Export")
+
+        # Create two columns for download buttons
+        col1, col2 = st.columns(2)
+
+        with col1:
+            # CSV Download (combined)
+            csv = st.session_state.df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                "📥 Download Full CSV",
+                csv,
+                f"{selected_project}_all_forms_data_{datetime.now().strftime('%Y%m%d')}.csv",
+                "text/csv",
+                key='csv-download'
+            )
+
+        with col2:
+            # Excel Download (separate sheets per form)
+            excel_buffer = BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+                for form_name, df in st.session_state.form_dfs.items():
+                    sanitized_name = sanitize_sheet_name(form_name)
+                    df.to_excel(writer, index=False, sheet_name=sanitized_name)
+                writer.close()
+
+                st.download_button(
+                    "📥 Download Full Excel (XLSX)",
+                    excel_buffer.getvalue(),
+                    f"{selected_project}_all_forms_data_{datetime.now().strftime('%Y%m%d')}.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key='excel-download'
+                )
+
 if __name__ == "__main__":
-    st.sidebar.markdown("""
-    <style>
-        .sidebar .sidebar-content {
-            width: 300px;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-    st.sidebar.title("ODK Data Processor")
-    st.sidebar.markdown("""
-    This application processes and visualizes data from ODK Central.
-    - Select a server, project, and form to view all submissions.
-    - Download data as Excel files with validation information.
-    - Download valid audio files (≥ 8 minutes) as a ZIP.
-    """)
+    main()
