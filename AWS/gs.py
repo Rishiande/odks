@@ -837,7 +837,7 @@ def sanitize_sheet_name(name):
 
 def main():
     st.set_page_config(page_title="ODK Data Processor", layout="wide")
-    st.title("📊 ODK Form Data Processor")
+    st.title("📊 ODK CALL VERIFICATION DATA")
 
     # Initialize session state for selections
     if 'server_path' not in st.session_state:
