@@ -403,6 +403,10 @@ forms = {
             "14-Villivakkam": {"project_id": 10, "form_id": "14-Villivakkam Landscape Survey 05-2025"},
             "223-Alangulam": {"project_id": 10, "form_id": "223-Alangulam Landscape Survey 05-2025"},
             "44-Anaikattu": {"project_id": 10, "form_id": "44-Anaikattu Landscape Survey 05-2025"}
+        },
+        "Bikas Tiruchirapalli APP" : {
+            "138-Manapparai" : { "project_id":22,"form_id":"138-Manapparai Landscape Survey 05-2025"},
+            "140-Tiruchirappalli (West)" : {"project_id":22,"form_id":"140-Tiruchirappalli (West) Landscape Survey 05-2025"}
         }
     }
 }
