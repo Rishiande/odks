@@ -47,7 +47,7 @@ from dotenv import load_dotenv
 import urllib.parse
 from pydub import AudioSegment
 import math
-
+from urllib.parse import quote 
 # Streamlit Setup
 st.set_page_config(page_title="ODK Audio Test Downloader", layout="centered")
 st.title("🔊 ODK Audio Test Download (All Files from Each Form)")
@@ -361,7 +361,11 @@ forms = {
             "50-Tirupattur Landscape Survey 05-2025": {"project_id": 17, "form_id": "50-Tirupattur Landscape Survey 05-2025", "url": "https://tnodk03.indiaintentions.com/v1/projects/17/forms/50-Tirupattur%20Landscape%20Survey%2005-2025.svc"}
         },
         "Sai Tiruppur": {
-            "126-Madathukulam Landscape Survey 05-2025": {"project_id": 14, "form_id": "126-Madathukulam Landscape Survey 05-2025", "url": "https://tnodk03.indiaintentions.com/v1/projects/14/forms/126-Madathukulam%20Landscape%20Survey%2005-2025.svc"}
+            "126-Madathukulam Landscape Survey 05-2025": {"project_id": 14, "form_id": "126-Madathukulam Landscape Survey 05-2025", "url": "https://tnodk03.indiaintentions.com/v1/projects/14/forms/126-Madathukulam%20Landscape%20Survey%2005-2025.svc"},
+            "112-Avanashi (SC)Landscape Survey 05-2025":{"project_id":14,"form_id":"112-Avanashi (SC)Landscape Survey 05-2025","url":"https://tnodk03.indiaintentions.com/v1/projects/14/forms/112-Avanashi%20(SC)Landscape%20Survey%2005-2025.svc"},
+            "113-Tiruppur (North) Landscape Survey 05-2025 2 copy 8":{"project_id":14,"form_id":"113-Tiruppur (North) Landscape Survey 05-2025 2 copy 8","url":"https://tnodk03.indiaintentions.com/v1/projects/14/forms/113-Tiruppur%20(North)%20Landscape%20Survey%2005-2025%202%20copy%208.svc"},
+            "114-Tiruppur (South) Landscape Survey 05-2025":{"project_id":14,"form_id":"114-Tiruppur (South) Landscape Survey 05-2025","url":"https://tnodk03.indiaintentions.com/v1/projects/14/forms/114-Tiruppur%20(South)%20Landscape%20Survey%2005-2025.svc"},
+            "125-Udumalpet Landscape Survey 05-2025":{"project_id":14,"form_id":"125-Udumalpet Landscape Survey 05-2025","url":"https://tnodk03.indiaintentions.com/v1/projects/14/forms/125-Udumalpet%20Landscape%20Survey%2005-2025.svc"}
         },
         "Bikas Kallakurichi APP": {
             "78-Rishivandiyam Landscape Survey 05-2025": {"project_id": 21, "form_id": "78-Rishivandiyam Landscape Survey 05-2025", "url": "https://tnodk03.indiaintentions.com/v1/projects/21/forms/78-Rishivandiyam%20Landscape%20Survey%2005-2025.svc"},
@@ -426,7 +430,8 @@ forms = {
             "58-Pennagaram Landscape Survey 05-2025": {"project_id": 18, "form_id": "58-Pennagaram Landscape Survey 05-2025", "url": "https://tnodk03.indiaintentions.com/v1/projects/18/forms/58-Pennagaram%20Landscape%20Survey%2005-2025.svc"},
             "59-Dharmapuri Landscape Survey 05-2025": {"project_id": 18, "form_id": "59-Dharmapuri Landscape Survey 05-2025", "url": "https://tnodk03.indiaintentions.com/v1/projects/18/forms/59-Dharmapuri%20Landscape%20Survey%2005-2025.svc"},
             "61-Harur (SC) Landscape Survey 05-2025": {"project_id": 18, "form_id": "61-Harur (SC) Landscape Survey 05-2025", "url": "https://tnodk03.indiaintentions.com/v1/projects/18/forms/61-Harur%20(SC)%20Landscape%20Survey%2005-2025.svc"}
-        }
+        },
+        
     }
 }
 def fetch_projects(server):
