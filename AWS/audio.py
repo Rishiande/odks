@@ -415,46 +415,6 @@ forms = {
         }
     }
 }
-import requests
-from requests.auth import HTTPBasicAuth
-import streamlit as st
-import pandas as pd
-import io
-import zipfile
-from datetime import datetime, timedelta
-
-# Streamlit Setup
-st.set_page_config(page_title="ODK Audio Test Downloader", layout="centered")
-st.title("🔊 ODK Audio Test Download (All Files from Each Form)")
-
-# ODK Configurations for each server
-ODK_CONFIGS = {
-    "Server 1": {
-        "ODK_USERNAME": "rushi@tnodk01.ii.com",
-        "ODK_PASSWORD": "rushi2025&",
-        "BASE_URL": "https://tnodk01.indiaintentions.com"
-    },
-    "Server 2": {
-        "ODK_USERNAME": "rushi@tnodk01.ii.com",
-        "ODK_PASSWORD": "rushi2025&",
-        "BASE_URL": "https://tnodk02.indiaintentions.com"
-    },
-    "Server 3": {
-        "ODK_USERNAME": "rushi@tnodk01.ii.com",
-        "ODK_PASSWORD": "rushi2025&",
-        "BASE_URL": "https://tnodk03.indiaintentions.com"
-    }
-}
-
-forms = {
-    "Server 1": {
-        "Krishnagiri APP": {
-            "52-Bargur Landscape Survey 05-2025": {"project_id": 7, "form_id": "52-Bargur Landscape Survey 05-2025"},
-            "53-Krishnagiri Landscape Survey 05-2025": {"project_id": 7, "form_id": "53-Krishnagiri Landscape Survey 05-2025"}
-        }
-    }
-}
-
 def fetch_submissions(selected_server, project_id, form_id):
     config = ODK_CONFIGS[selected_server]
     encoded_form_id = requests.utils.quote(form_id)
