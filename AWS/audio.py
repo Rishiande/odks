@@ -373,8 +373,6 @@ forms = {
         }
     }
 }
-
-
 def fetch_submissions(selected_server, project_id, form_id):
     config = ODK_CONFIGS[selected_server]
     submission_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms/{form_id}.svc/Submissions"
@@ -386,10 +384,17 @@ def fetch_submissions(selected_server, project_id, form_id):
     response.raise_for_status()
     return response.json().get("value", [])
 
-def filter_submissions_by_date(submissions, selected_date):
-    if selected_date:
-        selected_date_str = selected_date.strftime('%Y-%m-%d')
-        return [submission for submission in submissions if submission['__system']['submissionDate'].startswith(selected_date_str)]
+def filter_submissions_by_date_range(submissions, start_date, end_date):
+    if start_date and end_date:
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
+        
+        filtered = []
+        for submission in submissions:
+            submission_date = submission['__system']['submissionDate'][:10]  # Get just the date part
+            if start_date_str <= submission_date <= end_date_str:
+                filtered.append(submission)
+        return filtered
     return submissions
 
 def download_audio_files(selected_server, form_name, project_id, form_id, audio_submissions):
@@ -440,7 +445,13 @@ def main():
 
             if selected_project:
                 selected_form = st.sidebar.selectbox("Select Form", list(forms[selected_server][selected_project].keys()))
-                selected_date = st.sidebar.date_input("Select Date", None)
+                
+                # Date range selection
+                col1, col2 = st.sidebar.columns(2)
+                with col1:
+                    start_date = st.date_input("Start Date", None)
+                with col2:
+                    end_date = st.date_input("End Date", None)
 
                 if selected_form:
                     form_name = selected_form
@@ -454,11 +465,14 @@ def main():
                     if not data:
                         st.warning(f"No submissions found for {form_name}.")
                     else:
-                        # Filter submissions by date
-                        filtered_data = filter_submissions_by_date(data, selected_date)
+                        # Filter submissions by date range
+                        filtered_data = filter_submissions_by_date_range(data, start_date, end_date)
 
                         if not filtered_data:
-                            st.warning(f"No submissions found for {form_name} on {selected_date}.")
+                            date_range_msg = ""
+                            if start_date and end_date:
+                                date_range_msg = f" between {start_date} and {end_date}"
+                            st.warning(f"No submissions found for {form_name}{date_range_msg}.")
                         else:
                             df = pd.DataFrame(filtered_data)
                             audio_submissions = df[df['bg_audio'].notna()]  # Take all audio files
