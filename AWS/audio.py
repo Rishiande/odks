@@ -497,6 +497,62 @@ def fetch_submissions(server, project_id, form_id, start_date=None, end_date=Non
             st.error(f"Response: {e.response.text}")
         return []
 
+def download_all_audio(server, start_date, end_date):
+    """Download all audio files from all projects and forms"""
+    config = ODK_CONFIGS[server]
+    zip_buffer = io.BytesIO()
+    status_messages = []
+    total_files = 0
+    
+    with st.spinner("Preparing download..."):
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+            projects = fetch_projects(server)
+            
+            for project in projects:
+                project_id = project['id']
+                project_name = project.get('name', f"Project_{project_id}")
+                forms = fetch_forms(server, project_id)
+                
+                for form in forms:
+                    form_id = form['xmlFormId']
+                    form_name = form.get('name', form_id)
+                    submissions = fetch_submissions(server, project_id, form_id, start_date, end_date)
+                    
+                    if not submissions:
+                        status_messages.append(f"⚠️ No submissions in {form_name} ({project_name})")
+                        continue
+                    
+                    df = pd.DataFrame(submissions)
+                    if 'bg_audio' not in df.columns:
+                        status_messages.append(f"⚠️ No audio field in {form_name} ({project_name})")
+                        continue
+                    
+                    audio_subs = df[df['bg_audio'].notna()]
+                    if audio_subs.empty:
+                        status_messages.append(f"⚠️ No audio files in {form_name} ({project_name})")
+                        continue
+                    
+                    for _, row in audio_subs.iterrows():
+                        try:
+                            audio_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms/{form_id}/submissions/{row['__id']}/attachments/{row['bg_audio']}"
+                            response = requests.get(
+                                audio_url,
+                                auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
+                                timeout=30
+                            )
+                            response.raise_for_status()
+                            
+                            submitted_by = row.get('group_six', {}).get('submittedBy', 'unknown')
+                            filename = f"{project_name}/{form_name}/{submitted_by}_{row['bg_audio']}".replace(" ", "_")
+                            zipf.writestr(filename, response.content)
+                            total_files += 1
+                            status_messages.append(f"✅ Downloaded: {filename}")
+                        except Exception as e:
+                            status_messages.append(f"❌ Failed {row['bg_audio']}: {str(e)}")
+    
+    zip_buffer.seek(0)
+    return zip_buffer, status_messages, total_files
+
 def main():
     try:
         st.sidebar.header("Server Selection")
@@ -514,49 +570,26 @@ def main():
                 st.error("Start date must be before end date!")
                 return
             
-            if st.button("🚀 Fetch Projects"):
-                with st.spinner("Fetching projects..."):
-                    projects = fetch_projects(selected_server)
+            if st.button("🚀 Download All Audio Files Automatically"):
+                zip_file, status_msgs, file_count = download_all_audio(selected_server, start_date, end_date)
                 
-                if projects:
-                    st.success(f"Found {len(projects)} projects")
-                    for project in projects:
-                        st.write(f"Project: {project.get('name', 'Unnamed')} (ID: {project['id']})")
-                        
-                        with st.spinner(f"Fetching forms for project {project['id']}..."):
-                            forms = fetch_forms(selected_server, project['id'])
-                        
-                        if forms:
-                            st.write(f"Found {len(forms)} forms")
-                            for form in forms:
-                                st.write(f"- Form: {form.get('name', form['xmlFormId'])}")
-                                
-                                with st.spinner(f"Checking submissions..."):
-                                    submissions = fetch_submissions(
-                                        selected_server,
-                                        project['id'],
-                                        form['xmlFormId'],
-                                        start_date,
-                                        end_date
-                                    )
-                                
-                                if submissions:
-                                    st.success(f"Found {len(submissions)} submissions")
-                                    df = pd.DataFrame(submissions)
-                                    if 'bg_audio' in df.columns:
-                                        audio_count = df['bg_audio'].notna().sum()
-                                        st.write(f"Audio files found: {audio_count}")
-                                    else:
-                                        st.warning("No audio field in this form")
-                                else:
-                                    st.warning("No submissions found for this form")
-                        else:
-                            st.warning("No forms found in this project")
+                if file_count > 0:
+                    st.success(f"🎉 Successfully downloaded {file_count} audio files!")
+                    st.download_button(
+                        "⬇️ Download All Audio Files (ZIP)",
+                        zip_file.getvalue(),
+                        f"{selected_server}_audio_{datetime.now().strftime('%Y%m%d')}.zip",
+                        "application/zip"
+                    )
                 else:
-                    st.warning("No projects found on this server")
+                    st.warning("No audio files found matching your criteria")
+                
+                st.subheader("Download Log")
+                for msg in status_msgs:
+                    st.write(msg)
 
     except Exception as e:
-        st.error(f"An unexpected error occurred: {str(e)}")
+        st.error(f"An error occurred: {str(e)}")
 
 if __name__ == "__main__":
     main()
