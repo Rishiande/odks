@@ -77,13 +77,20 @@ forms = {
             "52-Bargur Landscape Survey 05-2025": {"project_id": 7, "form_id": "52-Bargur Landscape Survey 05-2025"},
             "53-Krishnagiri Landscape Survey 05-2025": {"project_id": 7, "form_id": "53-Krishnagiri Landscape Survey 05-2025"}
         },
+        "LN Kancheepuram" :{
+            "28-Alandur Landscape Survey 05-2025":{"project_id":17,"form_id":"28-Alandur Landscape Survey 05-2025"},
+            "29-Sriperumbudur (SC) Landscape Survey 05-2025":{"project_id":17,"form_id":"29-Sriperumbudur (SC) Landscape Survey 05-2025"},
+            "36-Uthiramerur Landscape Survey 05-2025":{"project_id":17,"form_id":"36-Uthiramerur Landscape Survey 05-2025"}
+        },
         "Bikas Tirunelveli APP": {
             "225-Ambasamudram Landscape Survey 05-2025": {"project_id": 14, "form_id": "225-Ambasamudram Landscape Survey 05-2025"},
             "227-Nanguneri Landscape Survey 05-2025": {"project_id": 14, "form_id": "227-Nanguneri Landscape Survey 05-2025"},
             "228-Radhapuram Landscape Survey 05-2025": {"project_id": 14, "form_id": "228-Radhapuram Landscape Survey 05-2025"}
         },
         "Gopal Misc APP": {
-            "148-Kunnam Landscape Survey 05-2025": {"project_id": 16, "form_id": "148-Kunnam Landscape Survey 05-2025"}
+            "148-Kunnam Landscape Survey 05-2025": {"project_id": 16, "form_id": "148-Kunnam Landscape Survey 05-2025"},
+            "5-Poonamallee (SC) Landscape Survey 05-2025":{"project_id":16,"form_id":"5-Poonamallee (SC) Landscape Survey 05-2025"},
+            "91-Veerapandi Landscape Survey 05-2025":{"project_id":16,"form_id":"91-Veerapandi Landscape Survey 05-2025"}
         },
         "Mahesh Ramanathapuram APP": {
             "210-Tiruvadanai Landscape Survey 05-2025": {"project_id": 11, "form_id": "210-Tiruvadanai Landscape Survey 05-2025"},
@@ -193,7 +200,8 @@ forms = {
             "50-Tirupattur Landscape Survey 05-2025": {"project_id": 12, "form_id": "50-Tirupattur Landscape Survey 05-2025"},
             "72-Tindivanam (SC) Landscape Survey 05-2025": {"project_id": 12, "form_id": "72-Tindivanam (SC) Landscape Survey 05-2025"},
             "154-Panruti Landscape Survey 05-2025":{"project_id":12,"form_id":"154-Panruti Landscape Survey 05-2025"},
-            "40-Katpadi Landscape Survey 05-2025" :{"project_id":12,"form_id":"40-Katpadi Landscape Survey 05-2025"}
+            "40-Katpadi Landscape Survey 05-2025" :{"project_id":12,"form_id":"40-Katpadi Landscape Survey 05-2025"},
+            "63-Tiruvannamalai Landscape Survey 05-2025":{"project_id":12,"form_id":"63-Tiruvannamalai Landscape Survey 05-2025"}
         },
         "Nanda TN Landscape": {
             "128-Oddanchatram Landscape Survey 05-2025": {"project_id": 11, "form_id": "128-Oddanchatram Landscape Survey 05-2025"},
@@ -206,6 +214,12 @@ forms = {
         "Closed Forms - Nanda TN Landscape": {
             "229-Kanniyakumari Landscape Survey 05-2025": {"project_id": 11, "form_id": "229-Kanniyakumari Landscape Survey 05-2025"},
             "230-Nagercoil Landscape Survey 05-2025": {"project_id": 11, "form_id": "230-Nagercoil Landscape Survey 05-2025"}
+        },
+        "LN Tirunelveli":{
+            "225-Ambasamudram Landscape Survey 05-2025":{"project_id":16,"form_id":"225-Ambasamudram Landscape Survey 05-2025"},
+            "226-Palayamkottai Landscape Survey 05-2025":{"project_id":16,"form_id":"226-Palayamkottai Landscape Survey 05-2025"},
+            "227-Nanguneri Landscape Survey 05-2025":{"project_id":16,"form_id":"227-Nanguneri Landscape Survey 05-2025"},
+            "228-Radhapuram Landscape Survey 05-2025":{"project_id":16,"form_id":"228-Radhapuram Landscape Survey 05-2025"}
         },
         "Nanda Kanniyakumari APP": {
             "229-Kanniyakumari Landscape Survey 05-2025": {"project_id": 14, "form_id": "229-Kanniyakumari Landscape Survey 05-2025"},
@@ -423,12 +437,14 @@ def fetch_projects(server):
         response = requests.get(
             url,
             auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
-            timeout=15
+            timeout=30
         )
         response.raise_for_status()
         return response.json()
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         st.error(f"Failed to fetch projects: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            st.error(f"Response: {e.response.text}")
         return []
 
 def fetch_forms(server, project_id):
@@ -439,18 +455,20 @@ def fetch_forms(server, project_id):
         response = requests.get(
             url,
             auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
-            timeout=15
+            timeout=30
         )
         response.raise_for_status()
         return response.json()
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         st.error(f"Failed to fetch forms: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            st.error(f"Response: {e.response.text}")
         return []
 
 def fetch_submissions(server, project_id, form_id, start_date=None, end_date=None):
     """Fetch submissions with date filtering"""
     config = ODK_CONFIGS[server]
-    encoded_form_id = requests.utils.quote(form_id)
+    encoded_form_id = quote(form_id, safe='')
     url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms/{encoded_form_id}.svc/Submissions"
     
     params = {}
@@ -468,65 +486,11 @@ def fetch_submissions(server, project_id, form_id, start_date=None, end_date=Non
         )
         response.raise_for_status()
         return response.json().get("value", [])
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         st.error(f"Failed to fetch submissions for form {form_id}: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            st.error(f"Response: {e.response.text}")
         return []
-
-def download_all_audio(server, start_date, end_date):
-    """Download all audio files from all projects and forms in one go"""
-    config = ODK_CONFIGS[server]
-    master_zip = io.BytesIO()
-    status_messages = []
-    total_files = 0
-    
-    with st.spinner("Preparing download..."):
-        with zipfile.ZipFile(master_zip, "w", zipfile.ZIP_DEFLATED) as master_zipf:
-            projects = fetch_projects(server)
-            
-            for project in projects:
-                project_id = project['id']
-                project_name = project.get('name', f"Project_{project_id}")
-                forms = fetch_forms(server, project_id)
-                
-                for form in forms:
-                    form_id = form['xmlFormId']
-                    form_name = form.get('name', form_id)
-                    
-                    submissions = fetch_submissions(server, project_id, form_id, start_date, end_date)
-                    if not submissions:
-                        status_messages.append(f"⚠️ No submissions for {form_name} in {project_name}")
-                        continue
-                    
-                    df = pd.DataFrame(submissions)
-                    if 'bg_audio' not in df.columns:
-                        status_messages.append(f"⚠️ No audio field in {form_name} ({project_name})")
-                        continue
-                    
-                    audio_subs = df[df['bg_audio'].notna()]
-                    if audio_subs.empty:
-                        status_messages.append(f"⚠️ No audio files in {form_name} ({project_name})")
-                        continue
-                    
-                    for _, row in audio_subs.iterrows():
-                        try:
-                            audio_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms/{form_id}/submissions/{row['__id']}/attachments/{row['bg_audio']}"
-                            response = requests.get(
-                                audio_url,
-                                auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
-                                timeout=30
-                            )
-                            response.raise_for_status()
-                            
-                            submitted_by = row.get('group_six', {}).get('submittedBy', 'unknown')
-                            filename = f"{project_name}/{form_name}/{submitted_by}_{row['bg_audio']}".replace(" ", "_")
-                            master_zipf.writestr(filename, response.content)
-                            total_files += 1
-                            status_messages.append(f"✅ Downloaded: {filename}")
-                        except Exception as e:
-                            status_messages.append(f"❌ Failed {row['bg_audio']}: {str(e)}")
-    
-    master_zip.seek(0)
-    return master_zip, status_messages, total_files
 
 def main():
     try:
@@ -545,27 +509,49 @@ def main():
                 st.error("Start date must be before end date!")
                 return
             
-            if st.button("🚀 Download All Audio Files Automatically"):
-                with st.spinner("Scanning all projects and forms..."):
-                    zip_file, status_msgs, file_count = download_all_audio(selected_server, start_date, end_date)
+            if st.button("🚀 Fetch Projects"):
+                with st.spinner("Fetching projects..."):
+                    projects = fetch_projects(selected_server)
                 
-                if file_count > 0:
-                    st.success(f"🎉 Successfully downloaded {file_count} audio files!")
-                    st.download_button(
-                        "⬇️ Download All Audio Files (ZIP)",
-                        zip_file.getvalue(),
-                        f"{selected_server}_all_audio_{datetime.now().strftime('%Y%m%d')}.zip",
-                        "application/zip"
-                    )
+                if projects:
+                    st.success(f"Found {len(projects)} projects")
+                    for project in projects:
+                        st.write(f"Project: {project.get('name', 'Unnamed')} (ID: {project['id']})")
+                        
+                        with st.spinner(f"Fetching forms for project {project['id']}..."):
+                            forms = fetch_forms(selected_server, project['id'])
+                        
+                        if forms:
+                            st.write(f"Found {len(forms)} forms")
+                            for form in forms:
+                                st.write(f"- Form: {form.get('name', form['xmlFormId'])}")
+                                
+                                with st.spinner(f"Checking submissions..."):
+                                    submissions = fetch_submissions(
+                                        selected_server,
+                                        project['id'],
+                                        form['xmlFormId'],
+                                        start_date,
+                                        end_date
+                                    )
+                                
+                                if submissions:
+                                    st.success(f"Found {len(submissions)} submissions")
+                                    df = pd.DataFrame(submissions)
+                                    if 'bg_audio' in df.columns:
+                                        audio_count = df['bg_audio'].notna().sum()
+                                        st.write(f"Audio files found: {audio_count}")
+                                    else:
+                                        st.warning("No audio field in this form")
+                                else:
+                                    st.warning("No submissions found for this form")
+                        else:
+                            st.warning("No forms found in this project")
                 else:
-                    st.warning("No audio files found matching your criteria")
-                
-                st.subheader("Download Log")
-                for msg in status_msgs:
-                    st.write(msg)
-    
+                    st.warning("No projects found on this server")
+
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+        st.error(f"An unexpected error occurred: {str(e)}")
 
 if __name__ == "__main__":
     main()
