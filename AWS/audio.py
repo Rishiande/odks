@@ -386,21 +386,31 @@ def fetch_form_list(selected_server, project_id):
 
 def fetch_submissions_count(selected_server, project_id, form_id, start_date=None, end_date=None):
     config = ODK_CONFIGS[selected_server]
-    submissions_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms/{form_id}.svc/Submissions"
     
-    # Add date filters if provided
+    # Properly encode form_id for URL
+    encoded_form_id = requests.utils.quote(form_id)
+    submissions_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms/{encoded_form_id}.svc/Submissions"
+    
+    # ODK expects dates in this format: 2025-05-17T00:00:00.000Z
     params = {}
     if start_date and end_date:
-        params['$filter'] = f"__system/submissionDate ge {start_date.isoformat()}Z and __system/submissionDate le {end_date.isoformat()}Z"
+        start_iso = f"{start_date.isoformat()}T00:00:00.000Z"
+        end_iso = f"{end_date.isoformat()}T23:59:59.999Z"
+        params['$filter'] = f"__system/submissionDate ge {start_iso} and __system/submissionDate le {end_iso}"
     
-    response = requests.get(
-        submissions_url,
-        auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
-        params=params,
-        timeout=30
-    )
-    response.raise_for_status()
-    return len(response.json().get("value", []))
+    try:
+        response = requests.get(
+            submissions_url,
+            auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
+            params=params,
+            timeout=30
+        )
+        response.raise_for_status()
+        return len(response.json().get("value", []))
+    
+    except requests.exceptions.HTTPError as e:
+        st.error(f"Error fetching submissions for {form_id}: {str(e)}")
+        return 0
 
 def main():
     try:
