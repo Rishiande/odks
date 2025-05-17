@@ -545,6 +545,7 @@ def main():
                     st.success(f"Found {len(audio_submissions)} audio files for {form_name} in {project_name}")
                     st.write(f"Sample files for {form_name}:", audio_submissions[['__id', 'bg_audio']])
 
+                    # Individual download button
                     if st.button(f"🚀 Download Audio Files for {form_name} in {project_name}"):
                         zip_buffer, download_status = download_audio_files(
                             selected_server, project_id, form_id, form_name, audio_submissions
@@ -563,15 +564,37 @@ def main():
                         for status in download_status:
                             st.write(status)
 
-            # Create project-wise ZIP files
-            if zip_buffers:
+            # Download All button
+            if zip_buffers and st.button("🚀 Download All Audio Files"):
                 for key, zip_info in zip_buffers.items():
-                    st.download_button(
-                        label=f"⬇️ Download {zip_info['project_name']} - {zip_info['form_name']} Audio Files (ZIP)",
-                        data=zip_info['buffer'].getvalue(),
-                        file_name=f"{zip_info['project_name']}_{zip_info['form_name']}_AUDIOS_{datetime.now().strftime('%Y%m%d')}.zip",
-                        mime="application/zip"
-                    )
+                    with st.spinner(f"Preparing download for {zip_info['project_name']} - {zip_info['form_name']}..."):
+                        zip_buffer, download_status = download_audio_files(
+                            selected_server, 
+                            projects[[p['name'] for p in projects].index(zip_info['project_name'])]['id'],
+                            forms[[f['name'] for f in forms].index(zip_info['form_name'])]['xmlFormId'],
+                            zip_info['form_name'],
+                            pd.DataFrame(filter_submissions_by_date_range(
+                                fetch_submissions(
+                                    selected_server,
+                                    projects[[p['name'] for p in projects].index(zip_info['project_name'])]['id'],
+                                    forms[[f['name'] for f in forms].index(zip_info['form_name'])]['xmlFormId']
+                                ),
+                                start_date,
+                                end_date
+                            ))
+                        )
+                        
+                        if zip_buffer:
+                            st.download_button(
+                                label=f"⬇️ Download {zip_info['project_name']} - {zip_info['form_name']} Audio Files (ZIP)",
+                                data=zip_buffer.getvalue(),
+                                file_name=f"{zip_info['project_name']}_{zip_info['form_name']}_AUDIOS_{datetime.now().strftime('%Y%m%d')}.zip",
+                                mime="application/zip"
+                            )
+                        
+                        st.subheader(f"Download Status for {zip_info['form_name']}")
+                        for status in download_status:
+                            st.write(status)
 
     except requests.exceptions.RequestException as e:
         st.error(f"Server connection error: {str(e)}")
