@@ -415,10 +415,31 @@ forms = {
         }
     }
 }
+def fetch_projects(selected_server):
+    config = ODK_CONFIGS[selected_server]
+    projects_url = f"{config['BASE_URL']}/v1/projects"
+    response = requests.get(
+        projects_url,
+        auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
+        timeout=30
+    )
+    response.raise_for_status()
+    return response.json()
+
+def fetch_forms(selected_server, project_id):
+    config = ODK_CONFIGS[selected_server]
+    forms_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms"
+    response = requests.get(
+        forms_url,
+        auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
+        timeout=30
+    )
+    response.raise_for_status()
+    return response.json()
+
 def fetch_submissions(selected_server, project_id, form_id):
     config = ODK_CONFIGS[selected_server]
-    encoded_form_id = requests.utils.quote(form_id)
-    submission_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms/{encoded_form_id}.svc/Submissions"
+    submission_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms/{form_id}.svc/Submissions"
     response = requests.get(
         submission_url,
         auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
@@ -429,12 +450,13 @@ def fetch_submissions(selected_server, project_id, form_id):
 
 def filter_submissions_by_date_range(submissions, start_date, end_date):
     if start_date and end_date:
-        start_str = start_date.strftime('%Y-%m-%d')
-        end_str = end_date.strftime('%Y-%m-%d')
-        return [sub for sub in submissions if start_str <= sub['__system']['submissionDate'][:10] <= end_str]
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
+        return [submission for submission in submissions 
+                if start_date_str <= submission['__system']['submissionDate'][:10] <= end_date_str]
     return submissions
 
-def download_audio_files(selected_server, form_name, project_id, form_id, audio_submissions):
+def download_audio_files(selected_server, project_id, form_id, form_name, audio_submissions):
     config = ODK_CONFIGS[selected_server]
     zip_buffer = io.BytesIO()
     download_status = []
@@ -455,129 +477,106 @@ def download_audio_files(selected_server, form_name, project_id, form_id, audio_
                     )
                     audio_response.raise_for_status()
 
-                    clean_name = f"{submitted_by}_{audio_file}".replace(" ", "_").replace("/", "_")
+                    clean_name = f"{submitted_by}_{audio_file}".replace(" ", "_").replace("/", "_").replace("\\", "_")
                     zip_file.writestr(clean_name, audio_response.content)
+
                     download_status.append(f"✅ Downloaded: {clean_name}")
 
+                except requests.exceptions.RequestException as e:
+                    download_status.append(f"❌ Server error for {audio_file}: {str(e)}")
                 except Exception as e:
-                    download_status.append(f"❌ Error for {audio_file}: {str(e)}")
+                    download_status.append(f"❌ Unexpected error for {audio_file}: {str(e)}")
 
     if zip_buffer.getbuffer().nbytes == 0:
         return None, download_status
+
     zip_buffer.seek(0)
     return zip_buffer, download_status
-
-def fetch_form_list(selected_server, project_id):
-    config = ODK_CONFIGS[selected_server]
-    forms_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms"
-    response = requests.get(
-        forms_url,
-        auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
-        timeout=30
-    )
-    response.raise_for_status()
-    return [form['xmlFormId'] for form in response.json()]
-
-def fetch_submissions_count(selected_server, project_id, form_id, start_date=None, end_date=None):
-    config = ODK_CONFIGS[selected_server]
-    encoded_form_id = requests.utils.quote(form_id)
-    submissions_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms/{encoded_form_id}.svc/Submissions"
-    
-    params = {}
-    if start_date and end_date:
-        start_iso = f"{start_date.isoformat()}T00:00:00.000Z"
-        end_iso = f"{end_date.isoformat()}T23:59:59.999Z"
-        params['$filter'] = f"__system/submissionDate ge {start_iso} and __system/submissionDate le {end_iso}"
-    
-    try:
-        response = requests.get(
-            submissions_url,
-            auth=HTTPBasicAuth(config['ODK_USERNAME'], config['ODK_PASSWORD']),
-            params=params,
-            timeout=30
-        )
-        response.raise_for_status()
-        return len(response.json().get("value", []))
-    except Exception as e:
-        st.error(f"Error checking submissions for {form_id}: {str(e)}")
-        return 0
 
 def main():
     try:
         st.sidebar.header("Filter Options")
-        selected_server = st.sidebar.selectbox("Select Server", list(forms.keys()))
+        selected_server = st.sidebar.selectbox("Select Server", list(ODK_CONFIGS.keys()))
         
-        col1, col2 = st.sidebar.columns(2)
-        with col1:
-            start_date = st.date_input("Start Date", value=datetime.now() - timedelta(days=7))
-        with col2:
-            end_date = st.date_input("End Date", value=datetime.now())
+        if selected_server:
+            start_date = st.sidebar.date_input("Start Date", None)
+            end_date = st.sidebar.date_input("End Date", None)
 
-        if selected_server and start_date and end_date:
-            selected_project = st.sidebar.selectbox("Select Project", list(forms[selected_server].keys()))
+            if start_date and end_date and start_date > end_date:
+                st.error("Start date must be before end date!")
+                return
+
+            with st.spinner("Fetching projects..."):
+                projects = fetch_projects(selected_server)
+
+            zip_buffers = {}
             
-            if selected_project:
-                project_id = forms[selected_server][selected_project][list(forms[selected_server][selected_project].keys())[0]]['project_id']
+            for project in projects:
+                project_id = project['id']
+                project_name = project.get('name', f"Project_{project_id}")
                 
-                with st.spinner("Checking forms..."):
-                    valid_forms = []
-                    for form_name, form_data in forms[selected_server][selected_project].items():
-                        count = fetch_submissions_count(
-                            selected_server,
-                            project_id,
-                            form_data['form_id'],
-                            start_date,
-                            end_date
-                        )
-                        if count > 0:
-                            valid_forms.append((form_name, form_data['form_id'], count))
+                with st.spinner(f"Fetching forms for {project_name}..."):
+                    forms = fetch_forms(selected_server, project_id)
                 
-                if not valid_forms:
-                    st.warning(f"No forms with submissions between {start_date} and {end_date}")
-                else:
-                    selected_form_name = st.sidebar.selectbox(
-                        "Select Form",
-                        [f"{name} ({count})" for name, _, count in valid_forms]
-                    )
-                    selected_form_id = valid_forms[[name for name, _, _ in valid_forms].index(selected_form_name.split(" (")[0])][1]
+                for form in forms:
+                    form_id = form['xmlFormId']
+                    form_name = form.get('name', form_id)
                     
-                    with st.spinner(f"Loading {selected_form_name}..."):
-                        data = fetch_submissions(selected_server, project_id, selected_form_id)
-                        filtered_data = filter_submissions_by_date_range(data, start_date, end_date)
+                    with st.spinner(f"Fetching submissions for {form_name}..."):
+                        data = fetch_submissions(selected_server, project_id, form_id)
+                    
+                    if not data:
+                        st.warning(f"No submissions found for {form_name} in {project_name}.")
+                        continue
+
+                    filtered_data = filter_submissions_by_date_range(data, start_date, end_date)
                     
                     if not filtered_data:
-                        st.warning(f"No submissions found for {selected_form_name}")
-                    else:
-                        df = pd.DataFrame(filtered_data)
-                        if 'bg_audio' not in df.columns:
-                            st.warning("No audio files found in submissions")
-                        else:
-                            audio_submissions = df[df['bg_audio'].notna()]
-                            if audio_submissions.empty:
-                                st.warning("No audio files found")
-                            else:
-                                st.success(f"Found {len(audio_submissions)} audio files")
-                                if st.button("🚀 Download Audio Files"):
-                                    zip_buffer, status = download_audio_files(
-                                        selected_server,
-                                        selected_form_name.split(" (")[0],
-                                        project_id,
-                                        selected_form_id,
-                                        audio_submissions
-                                    )
-                                    if zip_buffer:
-                                        st.download_button(
-                                            "⬇️ Download ZIP",
-                                            zip_buffer.getvalue(),
-                                            f"{selected_form_name.split(' (')[0]}_audio_{datetime.now().strftime('%Y%m%d')}.zip",
-                                            "application/zip"
-                                        )
-                                    st.subheader("Status")
-                                    for s in status:
-                                        st.write(s)
+                        st.warning(f"No submissions found for {form_name} in {project_name} within date range.")
+                        continue
 
+                    df = pd.DataFrame(filtered_data)
+                    audio_submissions = df[df['bg_audio'].notna()]
+                    
+                    if audio_submissions.empty:
+                        st.warning(f"No audio files found in submissions for {form_name} in {project_name}.")
+                        continue
+
+                    st.success(f"Found {len(audio_submissions)} audio files for {form_name} in {project_name}")
+                    st.write(f"Sample files for {form_name}:", audio_submissions[['__id', 'bg_audio']])
+
+                    if st.button(f"🚀 Download Audio Files for {form_name} in {project_name}"):
+                        zip_buffer, download_status = download_audio_files(
+                            selected_server, project_id, form_id, form_name, audio_submissions
+                        )
+
+                        if zip_buffer is None:
+                            st.error(f"No files downloaded for {form_name}. Check status messages.")
+                        else:
+                            zip_buffers[f"{project_name}_{form_name}"] = {
+                                'buffer': zip_buffer,
+                                'project_name': project_name,
+                                'form_name': form_name
+                            }
+
+                        st.subheader(f"Download Status for {form_name}")
+                        for status in download_status:
+                            st.write(status)
+
+            # Create project-wise ZIP files
+            if zip_buffers:
+                for key, zip_info in zip_buffers.items():
+                    st.download_button(
+                        label=f"⬇️ Download {zip_info['project_name']} - {zip_info['form_name']} Audio Files (ZIP)",
+                        data=zip_info['buffer'].getvalue(),
+                        file_name=f"{zip_info['project_name']}_{zip_info['form_name']}_AUDIOS_{datetime.now().strftime('%Y%m%d')}.zip",
+                        mime="application/zip"
+                    )
+
+    except requests.exceptions.RequestException as e:
+        st.error(f"Server connection error: {str(e)}")
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"An unexpected error occurred: {str(e)}")
 
 if __name__ == "__main__":
     main()
