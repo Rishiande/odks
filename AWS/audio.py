@@ -553,25 +553,10 @@ def fetch_submissions(selected_server, project_id, form_id):
     response.raise_for_status()
     return response.json().get("value", [])
 
-def filter_submissions_by_date_range(submissions, start_date, end_date):
-    if start_date or end_date:
-        filtered = []
-        start_date_str = start_date.strftime('%Y-%m-%d') if start_date else None
-        end_date_str = end_date.strftime('%Y-%m-%d') if end_date else None
-        
-        for submission in submissions:
-            submission_date = submission['__system']['submissionDate'][:10]  # Get just the date part
-            
-            if start_date_str and end_date_str:
-                if start_date_str <= submission_date <= end_date_str:
-                    filtered.append(submission)
-            elif start_date_str and not end_date_str:
-                if submission_date >= start_date_str:
-                    filtered.append(submission)
-            elif end_date_str and not start_date_str:
-                if submission_date <= end_date_str:
-                    filtered.append(submission)
-        return filtered
+def filter_submissions_by_date(submissions, selected_date):
+    if selected_date:
+        selected_date_str = selected_date.strftime('%Y-%m-%d')
+        return [submission for submission in submissions if submission['__system']['submissionDate'].startswith(selected_date_str)]
     return submissions
 
 def download_audio_files(selected_server, form_name, project_id, form_id, audio_submissions):
@@ -585,7 +570,7 @@ def download_audio_files(selected_server, form_name, project_id, form_id, audio_
             submission_id = row['__id']
             submitted_by = row.get('group_six', {}).get('submittedBy', 'unknown')
 
-            with st.spinner(f"Downloading {i+1}/{len(audio_submissions)} from {form_name}: {submitted_by}_{audio_file}..."):
+            with st.spinner(f"Downloading {i+1}/{len(audio_submissions)}: {submitted_by}_{audio_file}..."):
                 try:
                     audio_url = f"{config['BASE_URL']}/v1/projects/{project_id}/forms/{form_id}/submissions/{submission_id}/attachments/{audio_file}"
                     audio_response = requests.get(
@@ -595,16 +580,15 @@ def download_audio_files(selected_server, form_name, project_id, form_id, audio_
                     )
                     audio_response.raise_for_status()
 
-                    # Include form name in file path to avoid conflicts across forms
-                    clean_name = f"{form_name}/{submitted_by}_{audio_file}".replace(" ", "_").replace("/", "_").replace("\\", "_")
+                    clean_name = f"{submitted_by}_{audio_file}".replace(" ", "_").replace("/", "_").replace("\\", "_")
                     zip_file.writestr(clean_name, audio_response.content)
 
-                    download_status.append(f"✅ Downloaded from {form_name}: {clean_name}")
+                    download_status.append(f"✅ Downloaded: {clean_name}")
 
                 except requests.exceptions.RequestException as e:
-                    download_status.append(f"❌ Server error for {audio_file} in {form_name}: {str(e)}")
+                    download_status.append(f"❌ Server error for {audio_file}: {str(e)}")
                 except Exception as e:
-                    download_status.append(f"❌ Unexpected error for {audio_file} in {form_name}: {str(e)}")
+                    download_status.append(f"❌ Unexpected error for {audio_file}: {str(e)}")
 
     if zip_buffer.getbuffer().nbytes == 0:
         return None, download_status
@@ -614,7 +598,7 @@ def download_audio_files(selected_server, form_name, project_id, form_id, audio_
 
 def main():
     try:
-        # Sidebar for server, project, form selection mode, and date input
+        # Sidebar for server, project, and form selection and date input
         st.sidebar.header("Filter Options")
         selected_server = st.sidebar.selectbox("Select Server", list(forms.keys()))
 
@@ -622,133 +606,57 @@ def main():
             selected_project = st.sidebar.selectbox("Select Project", list(forms[selected_server].keys()))
 
             if selected_project:
-                # Option to choose between fetching all forms or manually selecting forms
-                form_selection_mode = st.sidebar.radio(
-                    "Form Selection Mode",
-                    ["Fetch All Forms", "Manually Select Forms"]
-                )
+                selected_form = st.sidebar.selectbox("Select Form", list(forms[selected_server][selected_project].keys()))
+                selected_date = st.sidebar.date_input("Select Date", None)
 
-                selected_forms = []
-                if form_selection_mode == "Manually Select Forms":
-                    total_forms = len(forms[selected_server][selected_project])
-                    # Display available forms
-                    st.sidebar.subheader(f"Available Forms in {selected_project}")
-                    form_names = list(forms[selected_server][selected_project].keys())
-                    if form_names:
-                        for form_name in form_names:
-                            st.sidebar.write(f"- {form_name}")
+                if selected_form:
+                    form_name = selected_form
+                    project_id = forms[selected_server][selected_project][selected_form]['project_id']
+                    form_id = forms[selected_server][selected_project][selected_form]['form_id']
+
+                    # Fetch submissions for the selected form
+                    with st.spinner(f"Fetching submissions for {form_name}..."):
+                        data = fetch_submissions(selected_server, project_id, form_id)
+
+                    if not data:
+                        st.warning(f"No submissions found for {form_name}.")
                     else:
-                        st.sidebar.warning("No forms available in this project.")
-                    # Allow user to manually select forms
-                    selected_forms = st.sidebar.multiselect(
-                        "Select Forms to Process",
-                        options=form_names,
-                        default=None,
-                        help="Choose one or more forms to process."
-                    )
-                    if not selected_forms:
-                        st.sidebar.warning("Please select at least one form to proceed.")
-
-                col1, col2 = st.sidebar.columns(2)
-                with col1:
-                    start_date = st.date_input("Start Date", None)
-                with col2:
-                    end_date = st.date_input("End Date", None)
-
-                # Initialize a single ZIP buffer for all forms
-                project_zip_buffer = io.BytesIO()
-                all_download_status = []
-                total_audio_files = 0
-                form_zip_buffers = {}  # Store ZIP buffers for each form
-
-                # Get forms based on selection mode
-                project_forms = forms[selected_server][selected_project]
-                if form_selection_mode == "Manually Select Forms":
-                    if selected_forms:
-                        project_forms = {name: project_forms[name] for name in selected_forms}
-                        # Display selected forms
-                        st.write(f"Selected forms: {', '.join(selected_forms)}")
-                    else:
-                        project_forms = {}  # No forms to process if none selected
-
-                if not project_forms:
-                    st.warning(f"No forms selected for project {selected_project}.")
-                else:
-                    # Process each form
-                    for form_name, form_info in project_forms.items():
-                        project_id = form_info['project_id']
-                        form_id = form_info['form_id']
-
-                        # Fetch submissions for the form
-                        with st.spinner(f"Fetching submissions for {form_name}..."):
-                            data = fetch_submissions(selected_server, project_id, form_id)
-
-                        if not data:
-                            st.warning(f"No submissions found for {form_name}.")
-                            continue
-
-                        # Filter submissions by date range
-                        filtered_data = filter_submissions_by_date_range(data, start_date, end_date)
+                        # Filter submissions by date
+                        filtered_data = filter_submissions_by_date(data, selected_date)
 
                         if not filtered_data:
-                            date_range_msg = ""
-                            if start_date and end_date:
-                                date_range_msg = f"between {start_date} and {end_date}"
-                            elif start_date:
-                                date_range_msg = f"after {start_date}"
-                            elif end_date:
-                                date_range_msg = f"before {end_date}"
-                            st.warning(f"No submissions found for {form_name} {date_range_msg}.")
-                            continue
+                            st.warning(f"No submissions found for {form_name} on {selected_date}.")
+                        else:
+                            df = pd.DataFrame(filtered_data)
+                            audio_submissions = df[df['bg_audio'].notna()]  # Take all audio files
 
-                        df = pd.DataFrame(filtered_data)
-                        audio_submissions = df[df['bg_audio'].notna()]  # Take all audio files
+                            if audio_submissions.empty:
+                                st.warning(f"No audio files found in submissions for {form_name}.")
+                            else:
+                                st.success(f"Found {len(audio_submissions)} audio files to download for {form_name}")
+                                st.write(f"Sample files to download for {form_name}:", audio_submissions[['__id', 'bg_audio']])
 
-                        if audio_submissions.empty:
-                            st.warning(f"No audio files found in submissions for {form_name}.")
-                            continue
+                                # Test download section
+                                if st.button(f"🚀 Download All Audio Files from {form_name}"):
+                                    zip_buffer, download_status = download_audio_files(
+                                        selected_server, form_name, project_id, form_id, audio_submissions
+                                    )
 
-                        st.success(f"Found {len(audio_submissions)} audio files to download for {form_name}")
-                        st.write(f"Sample files to download for {form_name}:", audio_submissions[['__id', 'bg_audio']])
-                        total_audio_files += len(audio_submissions)
+                                    if zip_buffer is None:
+                                        st.error("No files were downloaded. Check the status messages below.")
+                                    else:
+                                        st.success(f"🎉 Download completed for {form_name}!")
+                                        st.download_button(
+                                            label=f"⬇️ Download {form_name} Audio Files (ZIP)",
+                                            data=zip_buffer.getvalue(),
+                                            file_name=f"{form_name.replace(' ', '_')}_AUDIOS_{datetime.now().strftime('%Y%m%d')}.zip",
+                                            mime="application/zip"
+                                        )
 
-                        # Download audio files for the form
-                        form_zip_buffer, download_status = download_audio_files(
-                            selected_server, form_name, project_id, form_id, audio_submissions
-                        )
-                        all_download_status.extend(download_status)
-
-                        if form_zip_buffer:
-                            form_zip_buffers[form_name] = form_zip_buffer
-
-                    # Combine all form ZIPs into a single project ZIP
-                    if form_zip_buffers:
-                        with zipfile.ZipFile(project_zip_buffer, "w", zipfile.ZIP_DEFLATED) as project_zip:
-                            for form_name, zip_buffer in form_zip_buffers.items():
-                                zip_buffer.seek(0)
-                                # Read the form's ZIP and add its contents to the project ZIP
-                                with zipfile.ZipFile(zip_buffer, "r") as form_zip:
-                                    for file_info in form_zip.infolist():
-                                        project_zip.writestr(file_info, form_zip.read(file_info))
-
-                        project_zip_buffer.seek(0)
-
-                        mode_msg = "all forms" if form_selection_mode == "Fetch All Forms" else f"{len(project_forms)} manually selected forms"
-                        st.success(f"🎉 Download completed for {total_audio_files} audio files across {mode_msg} in {selected_project}!")
-                        st.download_button(
-                            label=f"⬇️ Download {selected_project} Audio Files (ZIP)",
-                            data=project_zip_buffer.getvalue(),
-                            file_name=f"{selected_project.replace(' ', '_')}_AUDIOS_{datetime.now().strftime('%Y%m%d')}.zip",
-                            mime="application/zip"
-                        )
-                    else:
-                        st.error("No files were downloaded. Check the status messages below.")
-
-                    # Display download status messages
-                    if all_download_status:
-                        st.subheader("Download Status")
-                        for status in all_download_status:
-                            st.write(status)
+                                    # Display download status messages
+                                    st.subheader("Download Status")
+                                    for status in download_status:
+                                        st.write(status)
 
     except requests.exceptions.RequestException as e:
         st.error(f"Server connection error: {str(e)}")
