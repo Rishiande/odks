@@ -81,6 +81,40 @@ forms = {
             "52-Bargur Landscape Survey 05-2025": {"project_id": 7, "form_id": "52-Bargur Landscape Survey 05-2025"},
             "53-Krishnagiri Landscape Survey 05-2025": {"project_id": 7, "form_id": "53-Krishnagiri Landscape Survey 05-2025"}
         },
+        "Tracking": {
+            "101-Dharapuram (SC) Landscape Survey 05-2025": {"project_id": 22, "form_id": "101-Dharapuram (SC) Landscape Survey 05-2025"},
+            "119-Thondamuthur Landscape Survey 05-2025": {"project_id": 22, "form_id": "119-Thondamuthur Landscape Survey 05-2025"},
+            "121-Singanallur Landscape Survey 05-2025": {"project_id": 22, "form_id": "121-Singanallur Landscape Survey 05-2025"},
+            "126-Madathukulam Landscape Survey 05-2025": {"project_id": 22, "form_id": "126-Madathukulam Landscape Survey 05-2025"},
+            "133-Vedasandur Landscape Survey 05-2025": {"project_id": 22, "form_id": "133-Vedasandur Landscape Survey 05-2025"},
+            "134-Aravakurichi Landscape Survey 05-2025": {"project_id": 22, "form_id": "134-Aravakurichi Landscape Survey 05-2025"},
+            "150-Jayankondam Landscape Survey 05-2025": {"project_id": 22, "form_id": "150-Jayankondam Landscape Survey 05-2025"},
+            "157-Bhuvanagiri Landscape Survey 05-2025": {"project_id": 22, "form_id": "157-Bhuvanagiri Landscape Survey 05-2025"},
+            "160-Sirkazhi (SC) Landscape Survey 05-2025": {"project_id": 22, "form_id": "160-Sirkazhi (SC) Landscape Survey 05-2025"},
+            "17-Royapuram Landscape Survey 05-2025": {"project_id": 22, "form_id": "17-Royapuram Landscape Survey 05-2025"},
+            "170-Thiruvidaimarudur (SC) Landscape Survey 05-2025  V6": {"project_id": 22, "form_id": "170-Thiruvidaimarudur (SC) Landscape Survey 05-2025  V6"},
+            "178-Gandharvakottai (SC) Landscape Survey 05-2025": {"project_id": 22, "form_id": "178-Gandharvakottai (SC) Landscape Survey 05-2025"},
+            "180-Pudukkottai Landscape Survey 05-2025": {"project_id": 22, "form_id": "180-Pudukkottai Landscape Survey 05-2025"},
+            "185-Tiruppattur Landscape Survey 05-2025": {"project_id": 22, "form_id": "185-Tiruppattur Landscape Survey 05-2025"},
+            "186-Sivaganga Landscape Survey 05-2025": {"project_id": 22, "form_id": "186-Sivaganga Landscape Survey 05-2025"},
+            "187-Manamadurai (SC) Landscape Survey 05-2025": {"project_id": 22, "form_id": "187-Manamadurai (SC) Landscape Survey 05-2025"},
+            "208-Tiruchuli Landscape Survey 05-2025": {"project_id": 22, "form_id": "208-Tiruchuli Landscape Survey 05-2025"},
+            "217-Ottapidaram (SC) Landscape Survey 05-2025": {"project_id": 22, "form_id": "217-Ottapidaram (SC) Landscape Survey 05-2025"},
+            "22-Virugampakkam Landscape Survey 05-2025": {"project_id": 22, "form_id": "22-Virugampakkam Landscape Survey 05-2025"},
+            "223-Alangulam Landscape Survey 05-2025": {"project_id": 22, "form_id": "223-Alangulam Landscape Survey 05-2025"},
+            "229-Kanniyakumari Landscape Survey 05-2025": {"project_id": 22, "form_id": "229-Kanniyakumari Landscape Survey 05-2025"},
+            "24-Thiyagarayanagar Landscape Survey 05-2025": {"project_id": 22, "form_id": "24-Thiyagarayanagar Landscape Survey 05-2025"},
+            "25-Mylapore Landscape Survey 05-2025": {"project_id": 22, "form_id": "25-Mylapore Landscape Survey 05-2025"},
+            "26-Velachery Landscape Survey 05-2025": {"project_id": 22, "form_id": "26-Velachery Landscape Survey 05-2025"},
+            "45-Kilvaithinankuppam (SC) Landscape Survey 05-2025": {"project_id": 22, "form_id": "45-Kilvaithinankuppam (SC) Landscape Survey 05-2025"},
+            "46-Gudiyattam (SC) Landscape Survey 05-2025": {"project_id": 22, "form_id": "46-Gudiyattam (SC) Landscape Survey 05-2025"},
+            "55-Hosur Landscape Survey 05-2025": {"project_id": 22, "form_id": "55-Hosur Landscape Survey 05-2025"},
+            "62-Chengam (SC) Landscape Survey 05-2025": {"project_id": 22, "form_id": "62-Chengam (SC) Landscape Survey 05-2025"},
+            "65-Kalasapakkam Landscape Survey 05-2025": {"project_id": 22, "form_id": "65-Kalasapakkam Landscape Survey 05-2025"},
+            "76-Tirukkoyilur Landscape Survey 05-2025": {"project_id": 22, "form_id": "76-Tirukkoyilur Landscape Survey 05-2025"},
+            "84-Omalur Landscape Survey 05-2025": {"project_id": 22, "form_id": "84-Omalur Landscape Survey 05-2025"},
+            "86-Edappadi Landscape Survey 05-2025": {"project_id": 22, "form_id": "86-Edappadi Landscape Survey 05-2025"}
+        },
         "Mahesh Misc APP": {
             "152-Vriddhachalam Landscape Survey 05-2025": {"project_id": 18, "form_id": "152-Vriddhachalam Landscape Survey 05-2025"},
             "186-Sivaganga Landscape Survey 05-2025": {"project_id": 18, "form_id": "186-Sivaganga Landscape Survey 05-2025"},
@@ -95,18 +129,6 @@ forms = {
             "29-Sriperumbudur (SC) Landscape Survey 05-2025": {"project_id": 17, "form_id": "29-Sriperumbudur (SC) Landscape Survey 05-2025"},
             "36-Uthiramerur Landscape Survey 05-2025": {"project_id": 17, "form_id": "36-Uthiramerur Landscape Survey 05-2025"},
             "37-Kancheepuram Landscape Survey 05-2025": {"project_id": 17, "form_id": "37-Kancheepuram Landscape Survey 05-2025"},
-            "3-Thirutthani Landscape Survey 04-2025": {"project_id": 4, "form_id": "3-Thirutthani Landscape Survey 04-2025"},
-            "201-Cumbum Landscape Survey 04-2025": {"project_id": 4, "form_id": "201-Cumbum Landscape Survey 04-2025"},
-            "199. Periyakulam (SC) Landscape Survey 04-2025": {"project_id": 4, "form_id": "199. Periyakulam (SC) Landscape Survey 04-2025"},
-            "198-Andipatti Landscape Survey 04-2025": {"project_id": 4, "form_id": "198-Andipatti Landscape Survey 04-2025"},
-            "180-Pudukkottai Landscape Survey 04-2025": {"project_id": 4, "form_id": "180-Pudukkottai Landscape Survey 04-2025"},
-            "158-Chidambaram Landscape Survey 04-2025": {"project_id": 4, "form_id": "158-Chidambaram Landscape Survey 04-2025"},
-            "145-Musiri Landscape Survey 04-2025": {"project_id": 4, "form_id": "145-Musiri Landscape Survey 04-2025"},
-            "137-Kulithalai Landscape Survey 04-2025": {"project_id": 4, "form_id": "137-Kulithalai Landscape Survey 04-2025"},
-            "136-Krishnarayapuram (SC) Landscape Survey 04-2025": {"project_id": 4, "form_id": "136-Krishnarayapuram (SC) Landscape Survey 04-2025"},
-            "12-Perambur Landscape Survey 04-2025": {"project_id": 4, "form_id": "12-Perambur Landscape Survey 04-2025"},
-            "109-Gudalur (SC) Landscape Survey 04-2025": {"project_id": 4, "form_id": "109-Gudalur (SC) Landscape Survey 04-2025"},
-            "55-Hosur Landscape Survey 04-2025": {"project_id": 5, "form_id": "55-Hosur Landscape Survey 04-2025"}
         },
         "Bikas Tirunelveli APP": {
             "225-Ambasamudram Landscape Survey 05-2025": {"project_id": 14, "form_id": "225-Ambasamudram Landscape Survey 05-2025"},
@@ -224,8 +246,7 @@ forms = {
             "112-Avanashi (SC) Landscape Survey 05-2025": {"project_id": 20, "form_id": "112-Avanashi (SC) Landscape Survey 05-2025", "url": "https://tnodk01.indiaintentions.com/v1/projects/20/forms/112-Avanashi%20(SC)%20Landscape%20Survey%2005-2025.svc"},
             "27-Shozhinganallur Landscape Survey 05-2025": {"project_id": 20, "form_id": "27-Shozhinganallur Landscape Survey 05-2025", "url": "https://tnodk01.indiaintentions.com/v1/projects/20/forms/27-Shozhinganallur%20Landscape%20Survey%2005-2025.svc"},
             "28-Alandur Landscape Survey 05-2025": {"project_id": 20, "form_id": "28-Alandur Landscape Survey 05-2025", "url": "https://tnodk01.indiaintentions.com/v1/projects/20/forms/28-Alandur%20Landscape%20Survey%2005-2025.svc"},
-            "32-Chengalpattu Landscape Survey 05-2025": {"project_id": 20, "form_id": "32-Chengalpattu Landscape Survey 05-2025", "url": "https://tnodk01.indiaintentions.com/v1/projects/20/forms/32-Chengalpattu%20Landscape%20Survey%2005-2025.svc"},
-            "17-Royapuram Landscape Survey 05-2025":{"project_id":20,"form_id":"17-Royapuram Landscape Survey 05-2025"}
+            "32-Chengalpattu Landscape Survey 05-2025": {"project_id": 20, "form_id": "32-Chengalpattu Landscape Survey 05-2025", "url": "https://tnodk01.indiaintentions.com/v1/projects/20/forms/32-Chengalpattu%20Landscape%20Survey%2005-2025.svc"}
         }
     },
     "Server 2": {
@@ -663,8 +684,6 @@ forms = {
         }
     }
 }
-
-
 def fetch_all_submissions(selected_server, project_id, form_id, start_date=None, end_date=None):
     """Fetch all submissions with optional date filtering"""
     config = ODK_CONFIGS[selected_server]
@@ -711,7 +730,7 @@ def fetch_all_submissions(selected_server, project_id, form_id, start_date=None,
     return all_data
 
 def download_audio_files(selected_server, form_name, project_id, form_id, audio_submissions):
-    """Download audio files from submissions and return as zip buffer"""
+    """Download audio files from submissions and return as zip data bytes"""
     config = ODK_CONFIGS[selected_server]
     zip_buffer = io.BytesIO()
     download_status = []
@@ -748,8 +767,10 @@ def download_audio_files(selected_server, form_name, project_id, form_id, audio_
             zip_buffer.close()
             return None, download_status
 
-        zip_buffer.seek(0)
-        return zip_buffer, download_status
+        # Get the zip data as bytes before closing buffer
+        zip_data = zip_buffer.getvalue()
+        zip_buffer.close()
+        return zip_data, download_status
 
     except Exception as e:
         st.error(f"Error creating ZIP file: {str(e)}")
@@ -776,7 +797,7 @@ def create_combined_zip(audio_files_data, server_name, date_suffix):
         with zipfile.ZipFile(zip_buffer_all, "w", zipfile.ZIP_DEFLATED) as zip_file_all:
             for project_name, form_name, zip_data, status_list in audio_files_data:
                 if zip_data and len(zip_data) > 0:
-                    # Create a temporary BytesIO from the zip data
+                    # Create a temporary BytesIO from the zip data bytes
                     temp_buffer = io.BytesIO(zip_data)
                     try:
                         with zipfile.ZipFile(temp_buffer, 'r') as temp_zip:
@@ -787,7 +808,10 @@ def create_combined_zip(audio_files_data, server_name, date_suffix):
                                 zip_file_all.writestr(nested_path, file_content)
                     except zipfile.BadZipFile:
                         st.warning(f"Skipping corrupted zip data for {project_name}/{form_name}")
+                    except Exception as e:
+                        st.warning(f"Error processing zip data for {project_name}/{form_name}: {str(e)}")
                     finally:
+                        # Always close the temporary buffer
                         temp_buffer.close()
                 
                 download_status_all.extend(status_list)
@@ -797,8 +821,10 @@ def create_combined_zip(audio_files_data, server_name, date_suffix):
             zip_buffer_all.close()
             return None, download_status_all
         
-        zip_buffer_all.seek(0)
-        return zip_buffer_all, download_status_all
+        # Get the zip data as bytes before closing
+        zip_data = zip_buffer_all.getvalue()
+        zip_buffer_all.close()
+        return zip_data, download_status_all
         
     except Exception as e:
         st.error(f"Error creating combined ZIP file: {str(e)}")
@@ -858,16 +884,12 @@ def main():
                                         audio_submissions = df[df['bg_audio'].notna()]
 
                                         if not audio_submissions.empty:
-                                            zip_buffer, download_status = download_audio_files(
+                                            zip_data, download_status = download_audio_files(
                                                 selected_server, form_name,
                                                 project_id, form_id, audio_submissions
                                             )
 
-                                            if zip_buffer:
-                                                # Store the zip data as bytes
-                                                zip_data = zip_buffer.getvalue()
-                                                zip_buffer.close()  # Close the buffer after getting the data
-                                                
+                                            if zip_data:
                                                 audio_files_data.append((project_name, form_name, zip_data, download_status))
                                                 st.success(f"✅ Processed {form_name} in {project_name} - {len(audio_submissions)} audio files")
                                             else:
@@ -880,22 +902,19 @@ def main():
 
                     # Create combined ZIP file
                     if audio_files_data:
-                        combined_zip, combined_status = create_combined_zip(audio_files_data, selected_server, date_suffix)
+                        combined_zip_data, combined_status = create_combined_zip(audio_files_data, selected_server, date_suffix)
                         
-                        if combined_zip:
+                        if combined_zip_data:
                             st.success(f"🎉 All projects and forms processed successfully for {selected_server}!")
                             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                             file_name = f"{selected_server.replace(' ', '_')}_ALL_PROJECTS_AUDIOS_{timestamp}{date_suffix}.zip"
                             
                             st.download_button(
                                 label=f"⬇️ Download All Audio Files for {selected_server} (ZIP)",
-                                data=combined_zip.getvalue(),
+                                data=combined_zip_data,
                                 file_name=file_name,
                                 mime="application/zip"
                             )
-                            
-                            # Close the combined zip buffer after use
-                            combined_zip.close()
 
                             with st.expander("Show Download Status"):
                                 for status in combined_status:
@@ -937,16 +956,12 @@ def main():
                                             audio_submissions = df[df['bg_audio'].notna()]
 
                                             if not audio_submissions.empty:
-                                                zip_buffer, download_status = download_audio_files(
+                                                zip_data, download_status = download_audio_files(
                                                     selected_server, form_name,
                                                     project_id, form_id, audio_submissions
                                                 )
 
-                                                if zip_buffer:
-                                                    # Store the zip data as bytes
-                                                    zip_data = zip_buffer.getvalue()
-                                                    zip_buffer.close()
-                                                    
+                                                if zip_data:
                                                     audio_files_data.append((project_name, form_name, zip_data, download_status))
                                                     st.success(f"✅ Processed {form_name} in {project_name} - {len(audio_submissions)} audio files")
                                                 else:
@@ -959,9 +974,9 @@ def main():
 
                         # Create combined ZIP file
                         if audio_files_data:
-                            combined_zip, combined_status = create_combined_zip(audio_files_data, selected_server, date_suffix)
+                            combined_zip_data, combined_status = create_combined_zip(audio_files_data, selected_server, date_suffix)
                             
-                            if combined_zip:
+                            if combined_zip_data:
                                 st.success(f"🎉 Selected projects processed successfully for {selected_server}!")
                                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                                 selected_projects_str = "_".join([p.replace(' ', '_') for p in selected_projects])
@@ -969,12 +984,10 @@ def main():
                                 
                                 st.download_button(
                                     label=f"⬇️ Download Selected Projects Audio Files (ZIP)",
-                                    data=combined_zip.getvalue(),
+                                    data=combined_zip_data,
                                     file_name=file_name,
                                     mime="application/zip"
                                 )
-                                
-                                combined_zip.close()
 
                                 with st.expander("Show Download Status"):
                                     for status in combined_status:
@@ -1020,16 +1033,12 @@ def main():
                                         audio_submissions = df[df['bg_audio'].notna()]
 
                                         if not audio_submissions.empty:
-                                            zip_buffer, download_status = download_audio_files(
+                                            zip_data, download_status = download_audio_files(
                                                 selected_server, form_name,
                                                 project_id, form_id, audio_submissions
                                             )
 
-                                            if zip_buffer:
-                                                # Store the zip data as bytes
-                                                zip_data = zip_buffer.getvalue()
-                                                zip_buffer.close()
-                                                
+                                            if zip_data:
                                                 audio_files_data.append((selected_project, form_name, zip_data, download_status))
                                                 st.success(f"✅ Processed {form_name} in {selected_project} - {len(audio_submissions)} audio files")
                                             else:
@@ -1042,9 +1051,9 @@ def main():
 
                             # Create combined ZIP file
                             if audio_files_data:
-                                combined_zip, combined_status = create_combined_zip(audio_files_data, selected_server, date_suffix)
+                                combined_zip_data, combined_status = create_combined_zip(audio_files_data, selected_server, date_suffix)
                                 
-                                if combined_zip:
+                                if combined_zip_data:
                                     st.success(f"🎉 Selected forms from {selected_project} processed successfully!")
                                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                                     selected_forms_str = "_".join([f.replace(' ', '_') for f in selected_forms])
@@ -1052,12 +1061,10 @@ def main():
                                     
                                     st.download_button(
                                         label=f"⬇️ Download Selected Forms from {selected_project} (ZIP)",
-                                        data=combined_zip.getvalue(),
+                                        data=combined_zip_data,
                                         file_name=file_name,
                                         mime="application/zip"
                                     )
-                                    
-                                    combined_zip.close()
 
                                     with st.expander("Show Download Status"):
                                         for status in combined_status:
@@ -1117,16 +1124,12 @@ def main():
                                     audio_submissions = df[df['bg_audio'].notna()]
 
                                     if not audio_submissions.empty:
-                                        zip_buffer, download_status = download_audio_files(
+                                        zip_data, download_status = download_audio_files(
                                             selected_server, form_name,
                                             project_id, form_id, audio_submissions
                                         )
 
-                                        if zip_buffer:
-                                            # Store the zip data as bytes
-                                            zip_data = zip_buffer.getvalue()
-                                            zip_buffer.close()
-                                            
+                                        if zip_data:
                                             audio_files_data.append((project_name, form_name, zip_data, download_status))
                                             st.success(f"✅ Processed {form_name} in {project_name} - {len(audio_submissions)} audio files")
                                         else:
@@ -1139,21 +1142,19 @@ def main():
 
                         # Create combined ZIP file
                         if audio_files_data:
-                            combined_zip, combined_status = create_combined_zip(audio_files_data, selected_server, date_suffix)
+                            combined_zip_data, combined_status = create_combined_zip(audio_files_data, selected_server, date_suffix)
                             
-                            if combined_zip:
+                            if combined_zip_data:
                                 st.success(f"🎉 Selected forms processed successfully!")
                                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                                 file_name = f"{selected_server.replace(' ', '_')}_SELECTED_FORMS_AUDIOS_{timestamp}{date_suffix}.zip"
                                 
                                 st.download_button(
                                     label=f"⬇️ Download Selected Forms Audio Files (ZIP)",
-                                    data=combined_zip.getvalue(),
+                                    data=combined_zip_data,
                                     file_name=file_name,
                                     mime="application/zip"
                                 )
-                                
-                                combined_zip.close()
 
                                 with st.expander("Show Download Status"):
                                     for status in combined_status:
@@ -1208,21 +1209,17 @@ def main():
                                 st.dataframe(audio_submissions[['__id', 'bg_audio']])
 
                             if st.button(f"🚀 Download Audio Files from {form_name} (Project: {project_name})"):
-                                zip_buffer, download_status = download_audio_files(
+                                zip_data, download_status = download_audio_files(
                                     selected_server, form_name,
                                     project_id, form_id, audio_submissions
                                 )
 
-                                if zip_buffer is None:
+                                if zip_data is None:
                                     st.error("No files were downloaded. Check the status messages below.")
                                 else:
                                     st.success(f"🎉 Download completed for {form_name} in {project_name}!")
                                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                                     file_name = f"{project_name.replace(' ', '_')}_{form_name.replace(' ', '_')}_AUDIOS_{timestamp}{date_suffix}.zip"
-                                    
-                                    # Get the zip data before closing
-                                    zip_data = zip_buffer.getvalue()
-                                    zip_buffer.close()
                                     
                                     st.download_button(
                                         label=f"⬇️ Download {form_name} Audio Files (ZIP)",
@@ -1241,3 +1238,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+      
