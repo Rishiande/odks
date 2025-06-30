@@ -1,0 +1,66 @@
+colnames,Bad,Good,Neutral
+Bheemadevarapalli,67.2,7.5,25.4
+Akkannapeta,71.2,14.4,14.4
+Chugurumamidi,61.8,22.8,15.4
+Elkaturhi,16.8,32.8,50.4
+Husnabad,48.5,33,18.5
+Koheda,53.5,15.5,31
+Saidapur,32.7,13.7,53.6
+#END OF,Mandal,--,--
+Female,56.4,19.6,24
+Male,41.8,22,36.3
+#END OF,Gender,--,--
+,88.9,5.6,5.6
+Chakali,50,20,30
+Christian,0,100,0
+Erukala,0,0,100
+Goud,30.2,32.3,37.5
+Kammari,42.9,42.9,14.3
+Kamsali,60,0,40
+Kuruma,22.2,11.1,66.7
+Lambadi,81.8,0,18.2
+Madiga,49.5,14.6,35.9
+Mala,37.9,19,43.1
+Mangali,53.3,20,26.7
+Mudiraj,65.3,11.1,23.6
+Munnuru Kapu,35.7,28.6,35.7
+Muslim,68.4,26.3,5.3
+Other,47.2,47.2,5.5
+OtherBC,45.2,9.7,45.2
+OtherOC,33.3,0,66.7
+OthersC,57.1,14.3,28.6
+OtherST,100,0,0
+Padmashali,54.1,4.9,41
+Reddy,48.6,21.6,29.7
+Vaddera,44.4,13.9,41.7
+Velama,NaN,NaN,NaN
+Yadava,47.6,26.2,26.2
+#END OF,Caste,--,--
+Teacher,76.5,17.6,5.9
+Artisan,59.3,19.8,20.9
+Business,44.1,8.5,47.5
+Farming,43.3,21.3,35.5
+Farm Labour,51.9,17.3,30.8
+Govt Employee,50,0,50
+Housewise,35,34.2,30.8
+Labour,51.1,15.6,33.3
+Other,75,10.7,14.3
+Private Employee,62.3,11.5,26.2
+Self Employment,45.9,25.2,28.8
+Student,36.6,32.3,31.2
+Unemployed,39.5,25.6,34.9
+#END OF,Profession,--,--
+60+,58,16,26
+18-24,48.5,24.2,27.3
+25-34,57,14.8,28.2
+35-44,41.9,18.1,40
+45-60,41.4,31.9,26.7
+#END OF,Age,--,--
+Above Degree,57.9,9.1,33
+10th,47.7,24.6,27.7
+5th,43.4,24.5,32.1
+7th,30.3,42.4,27.3
+Degree,41.4,25.4,33.1
+Illiterate,49.7,20,30.3
+Inter,53.8,24.4,21.8
+#END OF,Education,--,--
