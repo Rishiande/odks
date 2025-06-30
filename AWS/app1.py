@@ -5,7 +5,8 @@ import requests
 # Load the CSV file
 @st.cache_data
 def load_data():
-    file_path = 'CMApprovalGoodBad-CrossTabs-Weighted-ByRows.csv'
+    #file_path = 'CMApprovalGoodBad-CrossTabs-Weighted-ByRows.csv'
+    file_path = 'AWS/CMApprovalGoodBad-CrossTabs-Weighted-ByRows.csv'
     data = pd.read_csv(file_path)
     return data
 
