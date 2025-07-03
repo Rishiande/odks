@@ -1,186 +1,272 @@
 import streamlit as st
 import pandas as pd
-import os
-from openpyxl import Workbook
-from openpyxl.utils.dataframe import dataframe_to_rows
-import io
+import re
+from io import BytesIO
 
-def load_excel_file(file_path):
-    """Load Excel file and return DataFrame"""
-    try:
-        df = pd.read_excel(file_path)
-        return df
-    except Exception as e:
-        st.error(f"Error loading file {file_path}: {str(e)}")
+def extract_audio_code_from_bg_audio(bg_audio_value):
+    """Extract the numeric part from bg_audio column (remove .m4a extension)"""
+    if pd.isna(bg_audio_value):
         return None
+    
+    # Convert to string and remove .m4a extension
+    audio_str = str(bg_audio_value)
+    # Remove file extension if present
+    audio_code = re.sub(r'\.(m4a|mp3|wav|mp4)$', '', audio_str, flags=re.IGNORECASE)
+    return audio_code
 
-def extract_audio_code(filename):
-    """Extract audio code from filename by removing .m4a extension"""
-    if isinstance(filename, str) and filename.endswith('.m4a'):
-        return filename.replace('.m4a', '')
-    return filename
-
-def compare_and_filter_data(main_df, sample_df):
-    """Compare main excel data with sample excel and filter based on Accept/Reject"""
+def compare_audio_codes(sample_df, main_df):
+    """Compare audio codes and return matching records from main file"""
     
-    # Clean the audio codes in main file
-    main_df['audio_code_clean'] = main_df['bg_audio'].apply(extract_audio_code)
+    # Extract audio codes from main file bg_audio column
+    main_df['extracted_audio_code'] = main_df['bg_audio'].apply(extract_audio_code_from_bg_audio)
     
-    # Clean the audio codes in sample file - convert to string first
-    sample_df['Audio Code'] = sample_df['Audio Code'].astype(str)
+    # Separate accepted and rejected records from sample file
+    accepted_df = sample_df[sample_df['Accepted / Rejected'].str.lower().str.strip() == 'accepted']
+    rejected_df = sample_df[sample_df['Accepted / Rejected'].str.lower().str.strip() == 'rejected']
     
-    # Create dictionaries for accepted and rejected audio codes
-    accepted_codes = set(sample_df[sample_df['Accepted / Rejected'].str.strip().str.lower() == 'accept']['Audio Code'].values)
-    rejected_codes = set(sample_df[sample_df['Accepted / Rejected'].str.strip().str.lower() == 'reject']['Audio Code'].values)
+    # Get audio codes for accepted and rejected
+    accepted_audio_codes = accepted_df['Audio Code'].astype(str).tolist()
+    rejected_audio_codes = rejected_df['Audio Code'].astype(str).tolist()
     
-    # Filter main data based on accepted and rejected codes
-    accepted_data = main_df[main_df['audio_code_clean'].isin(accepted_codes)].copy()
-    rejected_data = main_df[main_df['audio_code_clean'].isin(rejected_codes)].copy()
+    # Find matching records for accepted
+    accepted_matching = main_df[main_df['extracted_audio_code'].isin(accepted_audio_codes)]
+    
+    # Find matching records for rejected
+    rejected_matching = main_df[main_df['extracted_audio_code'].isin(rejected_audio_codes)]
     
     # Remove the temporary column
-    accepted_data = accepted_data.drop('audio_code_clean', axis=1)
-    rejected_data = rejected_data.drop('audio_code_clean', axis=1)
+    accepted_matching = accepted_matching.drop('extracted_audio_code', axis=1)
+    rejected_matching = rejected_matching.drop('extracted_audio_code', axis=1)
     
-    return accepted_data, rejected_data, accepted_codes, rejected_codes
+    return accepted_matching, rejected_matching, accepted_df, rejected_df
 
-def create_excel_with_worksheets(accepted_data, rejected_data, output_filename):
-    """Create Excel file with separate worksheets for accepted and rejected data"""
-    
-    # Create a BytesIO object to store the Excel file
-    output = io.BytesIO()
-    
-    # Create Excel writer
+def convert_df_to_excel(accepted_df, rejected_df):
+    """Convert DataFrames to Excel bytes with separate sheets for accepted and rejected"""
+    output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        # Write accepted data to 'Accepted' worksheet
-        if not accepted_data.empty:
-            accepted_data.to_excel(writer, sheet_name='Accepted', index=False)
-        else:
-            # Create empty sheet if no accepted data
-            pd.DataFrame().to_excel(writer, sheet_name='Accepted', index=False)
+        if len(accepted_df) > 0:
+            accepted_df.to_excel(writer, index=False, sheet_name='Accepted Matches')
+        if len(rejected_df) > 0:
+            rejected_df.to_excel(writer, index=False, sheet_name='Rejected Matches')
         
-        # Write rejected data to 'Rejected' worksheet
-        if not rejected_data.empty:
-            rejected_data.to_excel(writer, sheet_name='Rejected', index=False)
-        else:
-            # Create empty sheet if no rejected data
-            pd.DataFrame().to_excel(writer, sheet_name='Rejected', index=False)
+        # If no data, create empty sheets with headers
+        if len(accepted_df) == 0:
+            pd.DataFrame(columns=['No accepted matches found']).to_excel(writer, index=False, sheet_name='Accepted Matches')
+        if len(rejected_df) == 0:
+            pd.DataFrame(columns=['No rejected matches found']).to_excel(writer, index=False, sheet_name='Rejected Matches')
     
-    output.seek(0)
-    return output
+    return output.getvalue()
 
 def main():
-    st.title("Excel File Comparison Tool")
-    st.markdown("Compare main Excel file with sample Excel file and create separate worksheets for Accepted and Rejected data")
+    st.set_page_config(page_title="Audio Code Comparison Tool", layout="wide")
     
-    # File upload section
-    st.header("Upload Files")
+    st.title("🎵 Audio Code Comparison Tool")
+    st.markdown("---")
     
+    # Create two columns for file uploads
     col1, col2 = st.columns(2)
     
     with col1:
-        st.subheader("CSV Main Excel File")
-        main_file = st.file_uploader("Upload CSV Excel File (30-Pallavaram Landscape S.xlsx)", type=['xlsx', 'xls'])
+        st.subheader("📁 Sample Excel File")
+        st.info("Upload the Excel file containing 'Audio Code' column")
+        sample_file = st.file_uploader(
+            "Choose Sample Excel File", 
+            type=['xlsx', 'xls'],
+            key="sample_file"
+        )
         
-    with col2:
-        st.subheader("QC Excel File")
-        sample_file = st.file_uploader("Upload QC Excel File (30AC.xlsx)", type=['xlsx', 'xls'])
+        if sample_file is not None:
+            try:
+                sample_df = pd.read_excel(sample_file)
+                st.success(f"✅ Sample file loaded successfully!")
+                st.write(f"**Rows:** {len(sample_df)}")
+                st.write(f"**Columns:** {list(sample_df.columns)}")
+                
+                # Check if Audio Code column exists
+                if 'Audio Code' in sample_df.columns:
+                    st.write(f"**Audio Code samples:**")
+                    st.write(sample_df['Audio Code'].head().tolist())
+                    
+                    # Check if Accepted / Rejected column exists
+                    if 'Accepted / Rejected' in sample_df.columns:
+                        st.write(f"**Accepted/Rejected distribution:**")
+                        status_counts = sample_df['Accepted / Rejected'].value_counts()
+                        st.write(status_counts.to_dict())
+                    else:
+                        st.error("❌ 'Accepted / Rejected' column not found in sample file!")
+                else:
+                    st.error("❌ 'Audio Code' column not found in sample file!")
+                    
+            except Exception as e:
+                st.error(f"❌ Error reading sample file: {str(e)}")
     
-    if main_file and sample_file:
+    with col2:
+        st.subheader("📁 Main Excel File")
+        st.info("Upload the Excel file containing 'bg_audio' column")
+        main_file = st.file_uploader(
+            "Choose Main Excel File", 
+            type=['xlsx', 'xls'],
+            key="main_file"
+        )
+        
+        if main_file is not None:
+            try:
+                main_df = pd.read_excel(main_file)
+                st.success(f"✅ Main file loaded successfully!")
+                st.write(f"**Rows:** {len(main_df)}")
+                st.write(f"**Columns:** {list(main_df.columns)}")
+                
+                # Check if bg_audio column exists
+                if 'bg_audio' in main_df.columns:
+                    st.write(f"**bg_audio samples:**")
+                    st.write(main_df['bg_audio'].head().tolist())
+                else:
+                    st.error("❌ 'bg_audio' column not found in main file!")
+                    
+            except Exception as e:
+                st.error(f"❌ Error reading main file: {str(e)}")
+    
+    # Process files if both are uploaded
+    if sample_file is not None and main_file is not None:
         try:
-            # Load the files
-            main_df = pd.read_excel(main_file)
             sample_df = pd.read_excel(sample_file)
+            main_df = pd.read_excel(main_file)
             
-            # Display file information
-            st.success("Files loaded successfully!")
+            # Validate required columns
+            if 'Audio Code' not in sample_df.columns:
+                st.error("❌ 'Audio Code' column not found in sample file!")
+                return
+                
+            if 'Accepted / Rejected' not in sample_df.columns:
+                st.error("❌ 'Accepted / Rejected' column not found in sample file!")
+                return
+                
+            if 'bg_audio' not in main_df.columns:
+                st.error("❌ 'bg_audio' column not found in main file!")
+                return
             
+            st.markdown("---")
+            st.subheader("🔍 Comparison Results")
+            
+            # Perform comparison
+            accepted_matching, rejected_matching, accepted_sample, rejected_sample = compare_audio_codes(sample_df, main_df)
+            
+            # Create metrics in columns
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Sample Records", len(sample_df))
+            with col2:
+                st.metric("Main Records", len(main_df))
+            with col3:
+                st.metric("Accepted Matches", len(accepted_matching))
+            with col4:
+                st.metric("Rejected Matches", len(rejected_matching))
+            
+            # Show accepted vs rejected breakdown
+            st.subheader("📊 Sample File Breakdown")
             col1, col2 = st.columns(2)
             
             with col1:
-                st.subheader("Main File Info")
-                st.write(f"Rows: {len(main_df)}")
-                st.write(f"Columns: {len(main_df.columns)}")
-                if 'bg_audio' in main_df.columns:
-                    st.write("✅ 'bg_audio' column found")
-                else:
-                    st.error("❌ 'bg_audio' column not found")
-                
-                with st.expander("Show Main File Preview"):
-                    st.dataframe(main_df.head())
-            
+                st.info(f"**Accepted Records**: {len(accepted_sample)}")
+                if len(accepted_sample) > 0:
+                    st.write("Sample Audio Codes:")
+                    st.write(accepted_sample['Audio Code'].head().tolist())
+                    
             with col2:
-                st.subheader("Sample File Info")
-                st.write(f"Rows: {len(sample_df)}")
-                st.write(f"Columns: {len(sample_df.columns)}")
-                if 'Accepted / Rejected' in sample_df.columns:
-                    st.write("✅ 'Accepted / Rejected' column found")
-                else:
-                    st.error("❌ 'Accepted / Rejected' column not found")
-                
-                with st.expander("Show Sample File Preview"):
-                    st.dataframe(sample_df.head())
+                st.info(f"**Rejected Records**: {len(rejected_sample)}")
+                if len(rejected_sample) > 0:
+                    st.write("Sample Audio Codes:")
+                    st.write(rejected_sample['Audio Code'].head().tolist())
             
-            # Check if required columns exist
-            if 'bg_audio' in main_df.columns and 'Accepted / Rejected' in sample_df.columns:
+            # Display results
+            if len(accepted_matching) > 0 or len(rejected_matching) > 0:
+                st.success(f"✅ Found matches!")
                 
-                # Process button
-                if st.button("Process Files", type="primary"):
-                    with st.spinner("Processing files..."):
-                        # Compare and filter data
-                        accepted_data, rejected_data, accepted_codes, rejected_codes = compare_and_filter_data(main_df, sample_df)
-                        
-                        # Display results
-                        st.header("Processing Results")
-                        
-                        col1, col2, col3 = st.columns(3)
-                        
-                        with col1:
-                            st.metric("Total Accepted Codes", len(accepted_codes))
-                            st.metric("Accepted Data Rows", len(accepted_data))
-                        
-                        with col2:
-                            st.metric("Total Rejected Codes", len(rejected_codes))
-                            st.metric("Rejected Data Rows", len(rejected_data))
-                        
-                        with col3:
-                            st.metric("Total Main File Rows", len(main_df))
-                            st.metric("Matched Rows", len(accepted_data) + len(rejected_data))
-                        
-                        # Show data previews
-                        if not accepted_data.empty:
-                            with st.expander("Accepted Data Preview"):
-                                st.dataframe(accepted_data.head(10))
-                        
-                        if not rejected_data.empty:
-                            with st.expander("Rejected Data Preview"):
-                                st.dataframe(rejected_data.head(10))
-                        
-                        # Create Excel file with separate worksheets
-                        excel_output = create_excel_with_worksheets(accepted_data, rejected_data, "Filtered_Data.xlsx")
-                        
-                        # Download button
-                        st.download_button(
-                            label="📥 Download Filtered Excel File",
-                            data=excel_output,
-                            file_name="Filtered_Data_with_Worksheets.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
-                        
-                        st.success("✅ Processing completed! The Excel file contains two worksheets: 'Accepted' and 'Rejected'")
-                        
-                        # Summary
-                        st.info(f"""
-                        **Summary:**
-                        - Found {len(accepted_codes)} accepted audio codes
-                        - Found {len(rejected_codes)} rejected audio codes
-                        - Extracted {len(accepted_data)} rows for accepted data
-                        - Extracted {len(rejected_data)} rows for rejected data
-                        - Created Excel file with separate 'Accepted' and 'Rejected' worksheets
-                        """)
-            
+                # Tabs for accepted and rejected
+                tab1, tab2 = st.tabs(["🟢 Accepted Matches", "🔴 Rejected Matches"])
+                
+                with tab1:
+                    if len(accepted_matching) > 0:
+                        st.success(f"Found {len(accepted_matching)} accepted matches")
+                        st.dataframe(accepted_matching, use_container_width=True)
+                    else:
+                        st.info("No accepted matches found")
+                
+                with tab2:
+                    if len(rejected_matching) > 0:
+                        st.success(f"Found {len(rejected_matching)} rejected matches")
+                        st.dataframe(rejected_matching, use_container_width=True)
+                    else:
+                        st.info("No rejected matches found")
+                
+                # Download option
+                st.subheader("💾 Download Results")
+                excel_data = convert_df_to_excel(accepted_matching, rejected_matching)
+                st.download_button(
+                    label="📥 Download All Results as Excel (Separate Sheets)",
+                    data=excel_data,
+                    file_name="audio_comparison_results.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                
+                # Show detailed comparison
+                with st.expander("🔍 View Detailed Comparison"):
+                    st.write("**Accepted Audio Codes from Sample:**")
+                    accepted_codes = accepted_sample['Audio Code'].astype(str).tolist()
+                    st.write(accepted_codes[:10])  # Show first 10
+                    
+                    st.write("**Rejected Audio Codes from Sample:**")
+                    rejected_codes = rejected_sample['Audio Code'].astype(str).tolist()
+                    st.write(rejected_codes[:10])  # Show first 10
+                    
+                    st.write("**Main bg_audio (extracted codes):**")
+                    main_codes = main_df['bg_audio'].apply(extract_audio_code_from_bg_audio).tolist()
+                    st.write([code for code in main_codes[:10] if code is not None])  # Show first 10
+                    
+            else:
+                st.warning("⚠️ No matching records found!")
+                
+                # Show some debug info
+                with st.expander("🔧 Debug Information"):
+                    st.write("**Accepted Audio Codes (first 10):**")
+                    accepted_codes = accepted_sample['Audio Code'].astype(str).tolist()
+                    st.write(accepted_codes[:10])
+                    
+                    st.write("**Rejected Audio Codes (first 10):**")
+                    rejected_codes = rejected_sample['Audio Code'].astype(str).tolist()
+                    st.write(rejected_codes[:10])
+                    
+                    st.write("**Main bg_audio extracted codes (first 10):**")
+                    main_codes = main_df['bg_audio'].apply(extract_audio_code_from_bg_audio).tolist()
+                    st.write([code for code in main_codes[:10] if code is not None])
+                    
         except Exception as e:
-            st.error(f"Error processing files: {str(e)}")
-            st.error("Please make sure your files have the correct format and column names.")
+            st.error(f"❌ Error processing files: {str(e)}")
+    
+    # Instructions
+    st.markdown("---")
+    st.subheader("📋 Instructions")
+    st.markdown("""
+    1. **Sample Excel File**: Upload the Excel file containing the 'Audio Code' and 'Accepted / Rejected' columns
+       - Audio Code Format: `1745739346222` (numeric codes)
+       - Accepted / Rejected: `Accepted` or `Rejected` (case insensitive)
+    
+    2. **Main Excel File**: Upload the Excel file containing the 'bg_audio' column
+       - Format: `1746440155390.m4a` (codes with file extensions)
+    
+    3. **Process**: The tool will:
+       - Separate accepted and rejected records from sample file
+       - Extract numeric codes from bg_audio column (remove file extensions)
+       - Compare both accepted and rejected codes with main file
+       - Generate separate results for accepted and rejected matches
+    
+    4. **Output**: Download Excel file with two sheets:
+       - **Accepted Matches**: All matching records for accepted audio codes
+       - **Rejected Matches**: All matching records for rejected audio codes
+    
+    5. **Download**: Download the results as a single Excel file with separate sheets
+    """)
 
 if __name__ == "__main__":
     main()
