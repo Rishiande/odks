@@ -1,15 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
-import os
 from io import BytesIO
-from pathlib import Path
-import glob
-import zipfile
-
-# Configuration - Update these paths as needed
-SAMPLE_FILES_PATH = r"C:\Users\rishi\Desktop\AWS\Samples Files"
-MAIN_FILES_PATH = r"C:\Users\rishi\Desktop\AWS\Main Files"
 
 def extract_audio_code_from_bg_audio(bg_audio_value):
     """Extract the numeric part from bg_audio column (remove .m4a extension)"""
@@ -21,23 +13,6 @@ def extract_audio_code_from_bg_audio(bg_audio_value):
     # Remove file extension if present
     audio_code = re.sub(r'\.(m4a|mp3|wav|mp4)$', '', audio_str, flags=re.IGNORECASE)
     return audio_code
-
-def get_excel_files_from_folder(folder_path):
-    """Get list of Excel files from a folder"""
-    if not os.path.exists(folder_path):
-        return []
-    
-    excel_files = []
-    for ext in ['*.xlsx', '*.xls']:
-        excel_files.extend(glob.glob(os.path.join(folder_path, ext)))
-    
-    # Return just the filenames (not full paths) for display
-    return [os.path.basename(f) for f in excel_files]
-
-def load_excel_file(folder_path, filename):
-    """Load Excel file from folder"""
-    full_path = os.path.join(folder_path, filename)
-    return pd.read_excel(full_path)
 
 def compare_audio_codes(sample_df, main_df):
     """Compare audio codes and return matching records from main file"""
@@ -70,7 +45,7 @@ def compare_audio_codes(sample_df, main_df):
     
     return accepted_matching, rejected_matching, remaining_records, accepted_df, rejected_df
 
-def convert_df_to_excel(accepted_df, rejected_df, remaining_df, output_filename):
+def convert_df_to_excel(accepted_df, rejected_df, remaining_df):
     """Convert DataFrames to Excel bytes with separate sheets for accepted, rejected, and remaining"""
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -94,404 +69,255 @@ def convert_df_to_excel(accepted_df, rejected_df, remaining_df, output_filename)
     
     return output.getvalue()
 
-def process_per_sample_file(selected_sample_files, selected_main_files):
-    """Process files organized by sample file - each sample file gets its own output"""
-    
-    per_sample_results = {}
-    overall_summary = []
-    
-    # Create progress bar
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    total_operations = len(selected_sample_files) * len(selected_main_files)
-    current_operation = 0
-    
-    for sample_file in selected_sample_files:
-        try:
-            # Initialize results for this sample file
-            sample_results = {
-                'accepted_matches': [],
-                'rejected_matches': [],
-                'remaining_records': [],
-                'summary': [],
-                'sample_file_name': sample_file
-            }
-            
-            # Load sample file
-            sample_df = load_excel_file(SAMPLE_FILES_PATH, sample_file)
-            
-            # Validate sample file
-            if 'Audio Code' not in sample_df.columns or 'Accepted / Rejected' not in sample_df.columns:
-                st.error(f"❌ Required columns missing in sample file: {sample_file}")
-                continue
-            
-            for main_file in selected_main_files:
-                try:
-                    current_operation += 1
-                    progress = current_operation / total_operations
-                    progress_bar.progress(progress)
-                    status_text.text(f"Processing: {sample_file} vs {main_file} ({current_operation}/{total_operations})")
-                    
-                    # Load main file
-                    main_df = load_excel_file(MAIN_FILES_PATH, main_file)
-                    
-                    # Validate main file
-                    if 'bg_audio' not in main_df.columns:
-                        st.warning(f"⚠️ 'bg_audio' column missing in main file: {main_file}")
-                        continue
-                    
-                    # Perform comparison
-                    accepted_matching, rejected_matching, remaining_records, accepted_sample, rejected_sample = compare_audio_codes(sample_df, main_df)
-                    
-                    # Add main file info to results
-                    if len(accepted_matching) > 0:
-                        accepted_matching['Main_File'] = main_file
-                        sample_results['accepted_matches'].append(accepted_matching)
-                    
-                    if len(rejected_matching) > 0:
-                        rejected_matching['Main_File'] = main_file
-                        sample_results['rejected_matches'].append(rejected_matching)
-                    
-                    if len(remaining_records) > 0:
-                        remaining_records['Main_File'] = main_file
-                        sample_results['remaining_records'].append(remaining_records)
-                    
-                    # Add summary info
-                    summary_row = {
-                        'Sample_File': sample_file,
-                        'Main_File': main_file,
-                        'Sample_Records': len(sample_df),
-                        'Main_Records': len(main_df),
-                        'Accepted_Matches': len(accepted_matching),
-                        'Rejected_Matches': len(rejected_matching),
-                        'Remaining_Records': len(remaining_records),
-                        'Total_Processed': len(accepted_matching) + len(rejected_matching) + len(remaining_records)
-                    }
-                    sample_results['summary'].append(summary_row)
-                    overall_summary.append(summary_row)
-                    
-                except Exception as e:
-                    st.error(f"❌ Error processing {main_file} with {sample_file}: {str(e)}")
-                    continue
-            
-            # Combine results for this sample file
-            combined_sample_results = {}
-            for key in ['accepted_matches', 'rejected_matches', 'remaining_records']:
-                if sample_results[key]:
-                    combined_sample_results[key] = pd.concat(sample_results[key], ignore_index=True)
-                else:
-                    combined_sample_results[key] = pd.DataFrame()
-            
-            combined_sample_results['summary'] = pd.DataFrame(sample_results['summary'])
-            combined_sample_results['sample_file_name'] = sample_file
-            
-            # Store results for this sample file
-            per_sample_results[sample_file] = combined_sample_results
-                    
-        except Exception as e:
-            st.error(f"❌ Error processing sample file {sample_file}: {str(e)}")
-            continue
-    
-    # Clear progress
-    progress_bar.empty()
-    status_text.empty()
-    
-    # Create overall summary
-    overall_summary_df = pd.DataFrame(overall_summary)
-    
-    return per_sample_results, overall_summary_df
-
-def create_zip_with_all_results(per_sample_results):
-    """Create a ZIP file containing separate Excel files for each sample file"""
-    zip_buffer = BytesIO()
-    
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        for sample_file, results in per_sample_results.items():
-            # Create Excel file for this sample
-            excel_data = convert_df_to_excel(
-                results['accepted_matches'], 
-                results['rejected_matches'], 
-                results['remaining_records'],
-                f"{sample_file}_results.xlsx"
-            )
-            
-            # Add to ZIP with clean filename
-            clean_name = re.sub(r'[^\w\-_\.]', '_', sample_file)
-            zip_file.writestr(f"{clean_name}_results.xlsx", excel_data)
-    
-    zip_buffer.seek(0)
-    return zip_buffer.getvalue()
-
 def main():
-    st.set_page_config(page_title="Enhanced Audio Code Comparison Tool - Per Sample Output", layout="wide")
+    st.set_page_config(page_title="Audio Code Comparison Tool", layout="wide")
     
-    st.title("🎵 Enhanced Audio Code Comparison Tool")
-    st.markdown("### Multi-File Processing with Per-Sample File Output")
+    st.title("🎵 Audio Code Comparison Tool")
     st.markdown("---")
     
-    # Display folder paths
-    st.subheader("📁 Configured Folder Paths")
+    # Create two columns for file uploads
     col1, col2 = st.columns(2)
     
     with col1:
-        st.info(f"**Sample Files Path:** `{SAMPLE_FILES_PATH}`")
-        # Check if sample folder exists
-        if os.path.exists(SAMPLE_FILES_PATH):
-            sample_files = get_excel_files_from_folder(SAMPLE_FILES_PATH)
-            st.success(f"✅ Found {len(sample_files)} Excel files")
-        else:
-            st.error("❌ Sample folder not found!")
-            sample_files = []
+        st.subheader("📁 Sample Excel File")
+        st.info("Upload the Excel file containing 'Audio Code' column")
+        sample_file = st.file_uploader(
+            "Choose Sample Excel File", 
+            type=['xlsx', 'xls'],
+            key="sample_file"
+        )
+        
+        if sample_file is not None:
+            try:
+                sample_df = pd.read_excel(sample_file)
+                st.success(f"✅ Sample file loaded successfully!")
+                st.write(f"**Rows:** {len(sample_df)}")
+                st.write(f"**Columns:** {list(sample_df.columns)}")
+                
+                # Check if Audio Code column exists
+                if 'Audio Code' in sample_df.columns:
+                    st.write(f"**Audio Code samples:**")
+                    st.write(sample_df['Audio Code'].head().tolist())
+                    
+                    # Check if Accepted / Rejected column exists
+                    if 'Accepted / Rejected' in sample_df.columns:
+                        st.write(f"**Accepted/Rejected distribution:**")
+                        status_counts = sample_df['Accepted / Rejected'].value_counts()
+                        st.write(status_counts.to_dict())
+                    else:
+                        st.error("❌ 'Accepted / Rejected' column not found in sample file!")
+                else:
+                    st.error("❌ 'Audio Code' column not found in sample file!")
+                    
+            except Exception as e:
+                st.error(f"❌ Error reading sample file: {str(e)}")
     
     with col2:
-        st.info(f"**Main Files Path:** `{MAIN_FILES_PATH}`")
-        # Check if main folder exists
-        if os.path.exists(MAIN_FILES_PATH):
-            main_files = get_excel_files_from_folder(MAIN_FILES_PATH)
-            st.success(f"✅ Found {len(main_files)} Excel files")
-        else:
-            st.error("❌ Main folder not found!")
-            main_files = []
-    
-    # File selection section
-    if sample_files and main_files:
-        st.markdown("---")
-        st.subheader("📋 Select Files for Processing")
+        st.subheader("📁 Main Excel File")
+        st.info("Upload the Excel file containing 'bg_audio' column")
+        main_file = st.file_uploader(
+            "Choose Main Excel File", 
+            type=['xlsx', 'xls'],
+            key="main_file"
+        )
         
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Select Sample Files:**")
-            selected_sample_files = st.multiselect(
-                "Choose sample files to process",
-                sample_files,
-                default=None,
-                help="Select one or more sample files containing 'Audio Code' and 'Accepted / Rejected' columns"
-            )
-            
-            if selected_sample_files:
-                st.success(f"✅ Selected {len(selected_sample_files)} sample files")
-                with st.expander("View Selected Sample Files"):
-                    for file in selected_sample_files:
-                        st.write(f"• {file}")
-        
-        with col2:
-            st.write("**Select Main Files:**")
-            selected_main_files = st.multiselect(
-                "Choose main files to process",
-                main_files,
-                default=None,
-                help="Select one or more main files containing 'bg_audio' column"
-            )
-            
-            if selected_main_files:
-                st.success(f"✅ Selected {len(selected_main_files)} main files")
-                with st.expander("View Selected Main Files"):
-                    for file in selected_main_files:
-                        st.write(f"• {file}")
-        
-        # Process button
-        if selected_sample_files and selected_main_files:
-            st.markdown("---")
-            
-            # Show processing summary
-            total_combinations = len(selected_sample_files) * len(selected_main_files)
-            st.info(f"📊 **Processing Summary:** {len(selected_sample_files)} sample files × {len(selected_main_files)} main files = {total_combinations} total combinations")
-            st.info(f"🎯 **Output Strategy:** Each sample file will generate its own separate output containing comparisons with all selected main files")
-            
-            if st.button("🚀 Start Processing", type="primary"):
-                st.markdown("---")
-                st.subheader("⚙️ Processing Files...")
+        if main_file is not None:
+            try:
+                main_df = pd.read_excel(main_file)
+                st.success(f"✅ Main file loaded successfully!")
+                st.write(f"**Rows:** {len(main_df)}")
+                st.write(f"**Columns:** {list(main_df.columns)}")
                 
-                # Process files per sample file
-                per_sample_results, overall_summary_df = process_per_sample_file(selected_sample_files, selected_main_files)
-                
-                if not overall_summary_df.empty:
-                    st.success("✅ Processing completed successfully!")
-                    
-                    # Display overall summary
-                    st.subheader("📊 Overall Processing Summary")
-                    st.dataframe(overall_summary_df, use_container_width=True)
-                    
-                    # Show overall metrics
-                    total_accepted = sum(len(results['accepted_matches']) for results in per_sample_results.values())
-                    total_rejected = sum(len(results['rejected_matches']) for results in per_sample_results.values())
-                    total_remaining = sum(len(results['remaining_records']) for results in per_sample_results.values())
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Total Accepted", total_accepted)
-                    with col2:
-                        st.metric("Total Rejected", total_rejected)
-                    with col3:
-                        st.metric("Total Remaining", total_remaining)
-                    with col4:
-                        st.metric("Total Processed", total_accepted + total_rejected + total_remaining)
-                    
-                    # Display results per sample file
-                    st.subheader("📋 Results by Sample File")
-                    
-                    # Create tabs for each sample file
-                    sample_tabs = st.tabs([f"📄 {sample_file}" for sample_file in selected_sample_files])
-                    
-                    for idx, (sample_file, tab) in enumerate(zip(selected_sample_files, sample_tabs)):
-                        with tab:
-                            if sample_file in per_sample_results:
-                                results = per_sample_results[sample_file]
-                                
-                                # Show metrics for this sample file
-                                col1, col2, col3, col4 = st.columns(4)
-                                with col1:
-                                    st.metric("Accepted", len(results['accepted_matches']))
-                                with col2:
-                                    st.metric("Rejected", len(results['rejected_matches']))
-                                with col3:
-                                    st.metric("Remaining", len(results['remaining_records']))
-                                with col4:
-                                    st.metric("Total", len(results['accepted_matches']) + len(results['rejected_matches']) + len(results['remaining_records']))
-                                
-                                # Show summary for this sample file
-                                st.write("**📊 Summary for this Sample File:**")
-                                st.dataframe(results['summary'], use_container_width=True)
-                                
-                                # Show detailed results in sub-tabs
-                                sub_tab1, sub_tab2, sub_tab3 = st.tabs(["🟢 Accepted", "🔴 Rejected", "⚠️ Remaining"])
-                                
-                                with sub_tab1:
-                                    if not results['accepted_matches'].empty:
-                                        st.success(f"Found {len(results['accepted_matches'])} accepted matches")
-                                        st.dataframe(results['accepted_matches'], use_container_width=True)
-                                    else:
-                                        st.info("No accepted matches found")
-                                
-                                with sub_tab2:
-                                    if not results['rejected_matches'].empty:
-                                        st.success(f"Found {len(results['rejected_matches'])} rejected matches")
-                                        st.dataframe(results['rejected_matches'], use_container_width=True)
-                                    else:
-                                        st.info("No rejected matches found")
-                                
-                                with sub_tab3:
-                                    if not results['remaining_records'].empty:
-                                        st.warning(f"Found {len(results['remaining_records'])} remaining records")
-                                        st.dataframe(results['remaining_records'], use_container_width=True)
-                                    else:
-                                        st.info("No remaining records found")
-                                
-                                # Individual download for this sample file
-                                st.markdown("---")
-                                if not results['accepted_matches'].empty or not results['rejected_matches'].empty or not results['remaining_records'].empty:
-                                    excel_data = convert_df_to_excel(
-                                        results['accepted_matches'], 
-                                        results['rejected_matches'], 
-                                        results['remaining_records'],
-                                        f"{sample_file}_results.xlsx"
-                                    )
-                                    
-                                    clean_name = re.sub(r'[^\w\-_\.]', '_', sample_file)
-                                    st.download_button(
-                                        label=f"📥 Download Results for {sample_file}",
-                                        data=excel_data,
-                                        file_name=f"{clean_name}_results.xlsx",
-                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                        key=f"download_{idx}"
-                                    )
-                            else:
-                                st.error(f"No results found for {sample_file}")
-                    
-                    # Download section for all results
-                    st.markdown("---")
-                    st.subheader("💾 Download All Results")
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        # Download all results as ZIP
-                        if per_sample_results:
-                            zip_data = create_zip_with_all_results(per_sample_results)
-                            st.download_button(
-                                label="📦 Download All Results (ZIP)",
-                                data=zip_data,
-                                file_name="all_sample_results.zip",
-                                mime="application/zip",
-                                help="Contains separate Excel files for each sample file"
-                            )
-                    
-                    with col2:
-                        # Download overall summary
-                        if not overall_summary_df.empty:
-                            csv_summary = overall_summary_df.to_csv(index=False)
-                            st.download_button(
-                                label="📊 Download Overall Summary (CSV)",
-                                data=csv_summary,
-                                file_name="overall_processing_summary.csv",
-                                mime="text/csv"
-                            )
-                
+                # Check if bg_audio column exists
+                if 'bg_audio' in main_df.columns:
+                    st.write(f"**bg_audio samples:**")
+                    st.write(main_df['bg_audio'].head().tolist())
                 else:
-                    st.error("❌ No results generated. Please check your files and try again.")
-        
-        else:
-            st.info("👆 Please select both sample and main files to start processing")
+                    st.error("❌ 'bg_audio' column not found in main file!")
+                    
+            except Exception as e:
+                st.error(f"❌ Error reading main file: {str(e)}")
     
-    else:
-        st.warning("⚠️ Please ensure both sample and main folders exist and contain Excel files")
-        
-        # Show path configuration help
-        st.markdown("---")
-        st.subheader("⚙️ Path Configuration")
-        st.markdown("""
-        **To update folder paths:**
-        1. Edit the paths at the top of the script:
-           - `SAMPLE_FILES_PATH = r"C:\\Users\\rishi\\Desktop\\AWS\\Samples Files"`
-           - `MAIN_FILES_PATH = r"C:\\Users\\rishi\\Desktop\\AWS\\Main Files"`
-        2. Make sure both folders exist and contain Excel files
-        3. Restart the Streamlit application
-        """)
+    # Process files if both are uploaded
+    if sample_file is not None and main_file is not None:
+        try:
+            sample_df = pd.read_excel(sample_file)
+            main_df = pd.read_excel(main_file)
+            
+            # Validate required columns
+            if 'Audio Code' not in sample_df.columns:
+                st.error("❌ 'Audio Code' column not found in sample file!")
+                return
+                
+            if 'Accepted / Rejected' not in sample_df.columns:
+                st.error("❌ 'Accepted / Rejected' column not found in sample file!")
+                return
+                
+            if 'bg_audio' not in main_df.columns:
+                st.error("❌ 'bg_audio' column not found in main file!")
+                return
+            
+            st.markdown("---")
+            st.subheader("🔍 Comparison Results")
+            
+            # Perform comparison
+            accepted_matching, rejected_matching, remaining_records, accepted_sample, rejected_sample = compare_audio_codes(sample_df, main_df)
+            
+            # Create metrics in columns
+            col1, col2, col3, col4, col5 = st.columns(5)
+            
+            with col1:
+                st.metric("Sample Records", len(sample_df))
+            with col2:
+                st.metric("Main Records", len(main_df))
+            with col3:
+                st.metric("Accepted Matches", len(accepted_matching))
+            with col4:
+                st.metric("Rejected Matches", len(rejected_matching))
+            with col5:
+                st.metric("Remaining Records", len(remaining_records))
+            
+            # Show accepted vs rejected breakdown
+            st.subheader("📊 Sample File Breakdown")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.info(f"**Accepted Records**: {len(accepted_sample)}")
+                if len(accepted_sample) > 0:
+                    st.write("Sample Audio Codes:")
+                    st.write(accepted_sample['Audio Code'].head().tolist())
+                    
+            with col2:
+                st.info(f"**Rejected Records**: {len(rejected_sample)}")
+                if len(rejected_sample) > 0:
+                    st.write("Sample Audio Codes:")
+                    st.write(rejected_sample['Audio Code'].head().tolist())
+            
+            # Display results
+            if len(accepted_matching) > 0 or len(rejected_matching) > 0 or len(remaining_records) > 0:
+                st.success(f"✅ Found matches and remaining records!")
+                
+                # Tabs for accepted, rejected, and remaining
+                tab1, tab2, tab3 = st.tabs(["🟢 Accepted Matches", "🔴 Rejected Matches", "⚠️ Rejected by Data verification"])
+                
+                with tab1:
+                    if len(accepted_matching) > 0:
+                        st.success(f"Found {len(accepted_matching)} accepted matches")
+                        st.dataframe(accepted_matching, use_container_width=True)
+                    else:
+                        st.info("No accepted matches found")
+                
+                with tab2:
+                    if len(rejected_matching) > 0:
+                        st.success(f"Found {len(rejected_matching)} rejected matches")
+                        st.dataframe(rejected_matching, use_container_width=True)
+                    else:
+                        st.info("No rejected matches found")
+                
+                with tab3:
+                    if len(remaining_records) > 0:
+                        st.warning(f"Found {len(remaining_records)} remaining records (not in sample file)")
+                        st.info("These records were not found in the sample file's accepted or rejected lists")
+                        st.dataframe(remaining_records, use_container_width=True)
+                    else:
+                        st.info("No remaining records found")
+                
+                # Download option
+                st.subheader("💾 Download Results")
+                excel_data = convert_df_to_excel(accepted_matching, rejected_matching, remaining_records)
+                st.download_button(
+                    label="📥 Download All Results as Excel (3 Separate Sheets)",
+                    data=excel_data,
+                    file_name="audio_comparison_results.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                
+                # Show summary
+                st.subheader("📈 Summary")
+                total_processed = len(accepted_matching) + len(rejected_matching) + len(remaining_records)
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Total Processed", total_processed)
+                with col2:
+                    if total_processed > 0:
+                        coverage_percentage = ((len(accepted_matching) + len(rejected_matching)) / total_processed) * 100
+                        st.metric("Sample Coverage", f"{coverage_percentage:.1f}%")
+                    else:
+                        st.metric("Sample Coverage", "0%")
+                with col3:
+                    if total_processed > 0:
+                        remaining_percentage = (len(remaining_records) / total_processed) * 100
+                        st.metric("Remaining %", f"{remaining_percentage:.1f}%")
+                    else:
+                        st.metric("Remaining %", "0%")
+                
+                # Show detailed comparison
+                with st.expander("🔍 View Detailed Comparison"):
+                    st.write("**Accepted Audio Codes from Sample:**")
+                    accepted_codes = accepted_sample['Audio Code'].astype(str).tolist()
+                    st.write(accepted_codes[:10])  # Show first 10
+                    
+                    st.write("**Rejected Audio Codes from Sample:**")
+                    rejected_codes = rejected_sample['Audio Code'].astype(str).tolist()
+                    st.write(rejected_codes[:10])  # Show first 10
+                    
+                    st.write("**Main bg_audio (extracted codes):**")
+                    main_codes = main_df['bg_audio'].apply(extract_audio_code_from_bg_audio).tolist()
+                    st.write([code for code in main_codes[:10] if code is not None])  # Show first 10
+                    
+                    st.write("**Remaining Records (first 5 bg_audio codes):**")
+                    if len(remaining_records) > 0:
+                        remaining_codes = remaining_records['bg_audio'].head().tolist()
+                        st.write(remaining_codes)
+                    else:
+                        st.write("No remaining records")
+                    
+            else:
+                st.warning("⚠️ No matching records found!")
+                
+                # Show some debug info
+                with st.expander("🔧 Debug Information"):
+                    st.write("**Accepted Audio Codes (first 10):**")
+                    accepted_codes = accepted_sample['Audio Code'].astype(str).tolist()
+                    st.write(accepted_codes[:10])
+                    
+                    st.write("**Rejected Audio Codes (first 10):**")
+                    rejected_codes = rejected_sample['Audio Code'].astype(str).tolist()
+                    st.write(rejected_codes[:10])
+                    
+                    st.write("**Main bg_audio extracted codes (first 10):**")
+                    main_codes = main_df['bg_audio'].apply(extract_audio_code_from_bg_audio).tolist()
+                    st.write([code for code in main_codes[:10] if code is not None])
+                    
+        except Exception as e:
+            st.error(f"❌ Error processing files: {str(e)}")
     
     # Instructions
     st.markdown("---")
-    st.subheader("📋 How to Use - Enhanced Per-Sample Output")
+    st.subheader("📋 Instructions")
     st.markdown("""
-    ### 🎯 **Purpose**
-    This enhanced tool processes multiple Excel files and **organizes results by sample file** - each sample file gets its own dedicated output.
+    1. **Sample Excel File**: Upload the Excel file containing the 'Audio Code' and 'Accepted / Rejected' columns
+       - Audio Code Format: `1745739346222` (numeric codes)
+       - Accepted / Rejected: `Accepted` or `Rejected` (case insensitive)
     
-    ### 📂 **Folder Structure**
-    - **Sample Files Folder**: Contains Excel files with 'Audio Code' and 'Accepted / Rejected' columns
-    - **Main Files Folder**: Contains Excel files with 'bg_audio' column
+    2. **Main Excel File**: Upload the Excel file containing the 'bg_audio' column
+       - Format: `1746440155390.m4a` (codes with file extensions)
     
-    ### 🔄 **Processing Flow**
-    1. **Select Files**: Choose multiple sample and main files
-    2. **Process**: Each sample file is compared against ALL selected main files
-    3. **Results**: Get separate outputs for each sample file
-    4. **Download**: Individual Excel files per sample + ZIP with all results
+    3. **Process**: The tool will:
+       - Separate accepted and rejected records from sample file
+       - Extract numeric codes from bg_audio column (remove file extensions)
+       - Compare both accepted and rejected codes with main file
+       - Generate separate results for accepted, rejected, and remaining matches
     
-    ### 📊 **Output Organization**
-    - **Per Sample File**: Each sample file generates its own Excel with 3 sheets:
-      - ✅ **Accepted Matches**: All accepted matches from all main files
-      - ❌ **Rejected Matches**: All rejected matches from all main files  
-      - ⚠️ **Rejected by Data verification**: All remaining records from all main files
-    - **Overall Summary**: Combined statistics across all processing
+    4. **Output**: Download Excel file with **three sheets**:
+       - **Accepted Matches**: All matching records for accepted audio codes
+       - **Rejected Matches**: All matching records for rejected audio codes
+       - **Rejected by Data verification**: All remaining records from main file (not in sample file)
     
-    ### 🎉 **New Benefits**
-    - ✅ **Organized Output**: Each sample file gets its own dedicated result
-    - ✅ **Individual Downloads**: Download results for specific sample files
-    - ✅ **Bulk Download**: ZIP file with all sample results
-    - ✅ **Clear Organization**: Easy to find results for specific sample files
-    - ✅ **Source Tracking**: Main file names included in results
-    - ✅ **Comprehensive Summary**: Both per-sample and overall statistics
+    5. **Download**: Download the results as a single Excel file with three separate sheets
     
-    ### 📋 **Example**
-    If you have:
-    - 3 Sample Files: `Sample_A.xlsx`, `Sample_B.xlsx`, `Sample_C.xlsx`
-    - 2 Main Files: `Main_1.xlsx`, `Main_2.xlsx`
-    
-    You'll get:
-    - 3 separate Excel outputs (one for each sample file)
-    - Each output contains matches from both main files
-    - 1 ZIP file containing all 3 Excel files
-    - Overall summary showing all 6 combinations processed
+    6. **Summary**: View coverage statistics and remaining records percentage
     """)
 
 if __name__ == "__main__":
