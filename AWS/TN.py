@@ -5,57 +5,28 @@ from io import BytesIO
 
 def extract_audio_code_from_bg_audio(bg_audio_value):
     """Extract the numeric part from bg_audio column (remove .m4a extension)"""
-    if pd.isna(bg_audio_value) or bg_audio_value in ['', ' ', None]:
+    if pd.isna(bg_audio_value):
         return None
     
-    # Convert to string and clean
-    audio_str = str(bg_audio_value).strip()
-    
+    # Convert to string and remove .m4a extension
+    audio_str = str(bg_audio_value)
     # Remove file extension if present
-    audio_code = re.sub(r'\.(m4a|mp3|wav|mp4|aac|flac)$', '', audio_str, flags=re.IGNORECASE)
-    
-    # Remove any non-digit characters (except decimal point for float handling)
-    audio_code = re.sub(r'[^\d.]', '', audio_code)
-    
-    # Convert to float then to int to handle cases like '1234.0'
-    try:
-        return str(int(float(audio_code))) if audio_code else None
-    except:
-        return None
-
-def clean_audio_code(audio_code):
-    """Clean and standardize audio codes from both files"""
-    if pd.isna(audio_code) or audio_code in ['', ' ', None]:
-        return None
-    
-    # Convert to string and clean
-    audio_str = str(audio_code).strip()
-    
-    # Remove any non-digit characters
-    audio_str = re.sub(r'[^\d]', '', audio_str)
-    
-    # Convert to float then to int to handle cases like '1234.0'
-    try:
-        return str(int(float(audio_str))) if audio_str else None
-    except:
-        return None
+    audio_code = re.sub(r'\.(m4a|mp3|wav|mp4)$', '', audio_str, flags=re.IGNORECASE)
+    return audio_code
 
 def compare_audio_codes(sample_df, main_df):
     """Compare audio codes and return matching records from main file"""
-    # Clean and standardize audio codes in both files
-    sample_df['clean_audio_code'] = sample_df['Audio Code'].apply(clean_audio_code)
+    
+    # Extract audio codes from main file bg_audio column
     main_df['extracted_audio_code'] = main_df['bg_audio'].apply(extract_audio_code_from_bg_audio)
     
-    # Clean Accepted/Rejected column (handle case, spaces, etc.)
-    sample_df['status_clean'] = sample_df['Accepted / Rejected'].str.strip().str.lower()
-    
     # Separate accepted and rejected records from sample file
-    accepted_df = sample_df[sample_df['status_clean'] == 'accepted']
-    rejected_df = sample_df[sample_df['status_clean'] == 'rejected']
+    accepted_df = sample_df[sample_df['Accepted / Rejected'].str.lower().str.strip() == 'accepted']
+    rejected_df = sample_df[sample_df['Accepted / Rejected'].str.lower().str.strip() == 'rejected']
     
-    # Get audio codes for accepted and rejected (cleaned)
-    accepted_audio_codes = accepted_df['clean_audio_code'].dropna().unique().tolist()
-    rejected_audio_codes = rejected_df['clean_audio_code'].dropna().unique().tolist()
+    # Get audio codes for accepted and rejected
+    accepted_audio_codes = accepted_df['Audio Code'].astype(str).tolist()
+    rejected_audio_codes = rejected_df['Audio Code'].astype(str).tolist()
     
     # Find matching records for accepted
     accepted_matching = main_df[main_df['extracted_audio_code'].isin(accepted_audio_codes)]
@@ -67,7 +38,7 @@ def compare_audio_codes(sample_df, main_df):
     all_sample_codes = accepted_audio_codes + rejected_audio_codes
     remaining_records = main_df[~main_df['extracted_audio_code'].isin(all_sample_codes)]
     
-    # Remove temporary columns
+    # Remove the temporary column from all DataFrames
     accepted_matching = accepted_matching.drop('extracted_audio_code', axis=1)
     rejected_matching = rejected_matching.drop('extracted_audio_code', axis=1)
     remaining_records = remaining_records.drop('extracted_audio_code', axis=1)
@@ -75,7 +46,7 @@ def compare_audio_codes(sample_df, main_df):
     return accepted_matching, rejected_matching, remaining_records, accepted_df, rejected_df
 
 def convert_df_to_excel(accepted_df, rejected_df, remaining_df):
-    """Convert DataFrames to Excel bytes with separate sheets"""
+    """Convert DataFrames to Excel bytes with separate sheets for accepted, rejected, and remaining"""
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         # Accepted matches sheet
@@ -90,7 +61,7 @@ def convert_df_to_excel(accepted_df, rejected_df, remaining_df):
         else:
             pd.DataFrame(columns=['No rejected matches found']).to_excel(writer, index=False, sheet_name='Rejected Matches')
         
-        # Remaining records sheet
+        # Remaining records sheet (Rejected by Data verification)
         if len(remaining_df) > 0:
             remaining_df.to_excel(writer, index=False, sheet_name='Rejected by Data verification')
         else:
@@ -98,41 +69,18 @@ def convert_df_to_excel(accepted_df, rejected_df, remaining_df):
     
     return output.getvalue()
 
-def validate_sample_file(df):
-    """Validate the structure of the sample file"""
-    required_columns = ['Audio Code', 'Accepted / Rejected']
-    missing_cols = [col for col in required_columns if col not in df.columns]
-    
-    if missing_cols:
-        return False, f"Missing required columns: {', '.join(missing_cols)}"
-    
-    # Check if Accepted/Rejected has valid values
-    if 'Accepted / Rejected' in df.columns:
-        valid_status = df['Accepted / Rejected'].str.strip().str.lower().isin(['accepted', 'rejected'])
-        if not valid_status.all():
-            invalid_values = df[~valid_status]['Accepted / Rejected'].unique()
-            return False, f"Invalid values in 'Accepted / Rejected': {', '.join(map(str, invalid_values))}"
-    
-    return True, "Sample file is valid"
-
-def validate_main_file(df):
-    """Validate the structure of the main file"""
-    if 'bg_audio' not in df.columns:
-        return False, "Missing required column: bg_audio"
-    return True, "Main file is valid"
-
 def main():
     st.set_page_config(page_title="Audio Code Comparison Tool", layout="wide")
     
     st.title("🎵 Audio Code Comparison Tool")
     st.markdown("---")
     
-    # File upload sections
+    # Create two columns for file uploads
     col1, col2 = st.columns(2)
     
     with col1:
         st.subheader("📁 Sample Excel File")
-        st.info("Upload the Excel file containing 'Audio Code' and 'Accepted / Rejected' columns")
+        st.info("Upload the Excel file containing 'Audio Code' column")
         sample_file = st.file_uploader(
             "Choose Sample Excel File", 
             type=['xlsx', 'xls'],
@@ -143,23 +91,23 @@ def main():
             try:
                 sample_df = pd.read_excel(sample_file)
                 st.success(f"✅ Sample file loaded successfully!")
+                st.write(f"**Rows:** {len(sample_df)}")
+                st.write(f"**Columns:** {list(sample_df.columns)}")
                 
-                # Validate sample file
-                is_valid, validation_msg = validate_sample_file(sample_df)
-                if not is_valid:
-                    st.error(f"❌ Validation Error: {validation_msg}")
+                # Check if Audio Code column exists
+                if 'Audio Code' in sample_df.columns:
+                    st.write(f"**Audio Code samples:**")
+                    st.write(sample_df['Audio Code'].head().tolist())
+                    
+                    # Check if Accepted / Rejected column exists
+                    if 'Accepted / Rejected' in sample_df.columns:
+                        st.write(f"**Accepted/Rejected distribution:**")
+                        status_counts = sample_df['Accepted / Rejected'].value_counts()
+                        st.write(status_counts.to_dict())
+                    else:
+                        st.error("❌ 'Accepted / Rejected' column not found in sample file!")
                 else:
-                    st.write(f"**Rows:** {len(sample_df)}")
-                    st.write(f"**Columns:** {list(sample_df.columns)}")
-                    
-                    # Show sample data
-                    with st.expander("👀 View Sample Data"):
-                        st.dataframe(sample_df.head())
-                    
-                    # Show status distribution
-                    status_counts = sample_df['Accepted / Rejected'].value_counts()
-                    st.write("**Accepted/Rejected distribution:**")
-                    st.bar_chart(status_counts)
+                    st.error("❌ 'Audio Code' column not found in sample file!")
                     
             except Exception as e:
                 st.error(f"❌ Error reading sample file: {str(e)}")
@@ -177,38 +125,36 @@ def main():
             try:
                 main_df = pd.read_excel(main_file)
                 st.success(f"✅ Main file loaded successfully!")
+                st.write(f"**Rows:** {len(main_df)}")
+                st.write(f"**Columns:** {list(main_df.columns)}")
                 
-                # Validate main file
-                is_valid, validation_msg = validate_main_file(main_df)
-                if not is_valid:
-                    st.error(f"❌ Validation Error: {validation_msg}")
+                # Check if bg_audio column exists
+                if 'bg_audio' in main_df.columns:
+                    st.write(f"**bg_audio samples:**")
+                    st.write(main_df['bg_audio'].head().tolist())
                 else:
-                    st.write(f"**Rows:** {len(main_df)}")
-                    st.write(f"**Columns:** {list(main_df.columns)}")
-                    
-                    # Show sample data
-                    with st.expander("👀 View Sample Data"):
-                        st.dataframe(main_df.head())
+                    st.error("❌ 'bg_audio' column not found in main file!")
                     
             except Exception as e:
                 st.error(f"❌ Error reading main file: {str(e)}")
     
-    # Process files if both are uploaded and valid
+    # Process files if both are uploaded
     if sample_file is not None and main_file is not None:
         try:
             sample_df = pd.read_excel(sample_file)
             main_df = pd.read_excel(main_file)
             
-            # Validate files
-            sample_valid, sample_msg = validate_sample_file(sample_df)
-            main_valid, main_msg = validate_main_file(main_df)
-            
-            if not sample_valid or not main_valid:
-                st.error("❌ Please fix the validation errors before proceeding")
-                if not sample_valid:
-                    st.error(f"Sample file: {sample_msg}")
-                if not main_valid:
-                    st.error(f"Main file: {main_msg}")
+            # Validate required columns
+            if 'Audio Code' not in sample_df.columns:
+                st.error("❌ 'Audio Code' column not found in sample file!")
+                return
+                
+            if 'Accepted / Rejected' not in sample_df.columns:
+                st.error("❌ 'Accepted / Rejected' column not found in sample file!")
+                return
+                
+            if 'bg_audio' not in main_df.columns:
+                st.error("❌ 'bg_audio' column not found in main file!")
                 return
             
             st.markdown("---")
@@ -217,96 +163,161 @@ def main():
             # Perform comparison
             accepted_matching, rejected_matching, remaining_records, accepted_sample, rejected_sample = compare_audio_codes(sample_df, main_df)
             
-            # Metrics
+            # Create metrics in columns
             col1, col2, col3, col4, col5 = st.columns(5)
-            col1.metric("Sample Records", len(sample_df))
-            col2.metric("Main Records", len(main_df))
-            col3.metric("Accepted Matches", len(accepted_matching), 
-                        f"{len(accepted_sample)} in sample")
-            col4.metric("Rejected Matches", len(rejected_matching), 
-                        f"{len(rejected_sample)} in sample")
-            col5.metric("Remaining Records", len(remaining_records), 
-                        f"{len(remaining_records)/len(main_df)*100:.1f}%")
             
-            # Results tabs
-            tab1, tab2, tab3 = st.tabs(["🟢 Accepted Matches", "🔴 Rejected Matches", "⚠️ Rejected by Data verification"])
+            with col1:
+                st.metric("Sample Records", len(sample_df))
+            with col2:
+                st.metric("Main Records", len(main_df))
+            with col3:
+                st.metric("Accepted Matches", len(accepted_matching))
+            with col4:
+                st.metric("Rejected Matches", len(rejected_matching))
+            with col5:
+                st.metric("Remaining Records", len(remaining_records))
             
-            with tab1:
-                if len(accepted_matching) > 0:
-                    st.success(f"Found {len(accepted_matching)} accepted matches")
-                    st.dataframe(accepted_matching, use_container_width=True)
-                else:
-                    st.info("No accepted matches found")
-                    st.write("Sample Accepted Audio Codes:")
+            # Show accepted vs rejected breakdown
+            st.subheader("📊 Sample File Breakdown")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.info(f"**Accepted Records**: {len(accepted_sample)}")
+                if len(accepted_sample) > 0:
+                    st.write("Sample Audio Codes:")
                     st.write(accepted_sample['Audio Code'].head().tolist())
-            
-            with tab2:
-                if len(rejected_matching) > 0:
-                    st.success(f"Found {len(rejected_matching)} rejected matches")
-                    st.dataframe(rejected_matching, use_container_width=True)
-                else:
-                    st.info("No rejected matches found")
-                    st.write("Sample Rejected Audio Codes:")
+                    
+            with col2:
+                st.info(f"**Rejected Records**: {len(rejected_sample)}")
+                if len(rejected_sample) > 0:
+                    st.write("Sample Audio Codes:")
                     st.write(rejected_sample['Audio Code'].head().tolist())
             
-            with tab3:
-                if len(remaining_records) > 0:
-                    st.warning(f"Found {len(remaining_records)} remaining records")
-                    st.dataframe(remaining_records, use_container_width=True)
+            # Display results
+            if len(accepted_matching) > 0 or len(rejected_matching) > 0 or len(remaining_records) > 0:
+                st.success(f"✅ Found matches and remaining records!")
+                
+                # Tabs for accepted, rejected, and remaining
+                tab1, tab2, tab3 = st.tabs(["🟢 Accepted Matches", "🔴 Rejected Matches", "⚠️ Rejected by Data verification"])
+                
+                with tab1:
+                    if len(accepted_matching) > 0:
+                        st.success(f"Found {len(accepted_matching)} accepted matches")
+                        st.dataframe(accepted_matching, use_container_width=True)
+                    else:
+                        st.info("No accepted matches found")
+                
+                with tab2:
+                    if len(rejected_matching) > 0:
+                        st.success(f"Found {len(rejected_matching)} rejected matches")
+                        st.dataframe(rejected_matching, use_container_width=True)
+                    else:
+                        st.info("No rejected matches found")
+                
+                with tab3:
+                    if len(remaining_records) > 0:
+                        st.warning(f"Found {len(remaining_records)} remaining records (not in sample file)")
+                        st.info("These records were not found in the sample file's accepted or rejected lists")
+                        st.dataframe(remaining_records, use_container_width=True)
+                    else:
+                        st.info("No remaining records found")
+                
+                # Download option
+                st.subheader("💾 Download Results")
+                excel_data = convert_df_to_excel(accepted_matching, rejected_matching, remaining_records)
+                st.download_button(
+                    label="📥 Download All Results as Excel (3 Separate Sheets)",
+                    data=excel_data,
+                    file_name="audio_comparison_results.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                
+                # Show summary
+                st.subheader("📈 Summary")
+                total_processed = len(accepted_matching) + len(rejected_matching) + len(remaining_records)
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Total Processed", total_processed)
+                with col2:
+                    if total_processed > 0:
+                        coverage_percentage = ((len(accepted_matching) + len(rejected_matching)) / total_processed) * 100
+                        st.metric("Sample Coverage", f"{coverage_percentage:.1f}%")
+                    else:
+                        st.metric("Sample Coverage", "0%")
+                with col3:
+                    if total_processed > 0:
+                        remaining_percentage = (len(remaining_records) / total_processed) * 100
+                        st.metric("Remaining %", f"{remaining_percentage:.1f}%")
+                    else:
+                        st.metric("Remaining %", "0%")
+                
+                # Show detailed comparison
+                with st.expander("🔍 View Detailed Comparison"):
+                    st.write("**Accepted Audio Codes from Sample:**")
+                    accepted_codes = accepted_sample['Audio Code'].astype(str).tolist()
+                    st.write(accepted_codes[:10])  # Show first 10
                     
-                    # Show some bg_audio values for debugging
-                    st.write("Sample bg_audio values from remaining records:")
-                    st.write(remaining_records['bg_audio'].head().tolist())
-                else:
-                    st.info("No remaining records found")
-            
-            # Debug info
-            with st.expander("🐛 Debug Information"):
-                st.write("**Sample Accepted Audio Codes (first 10):**")
-                st.write(accepted_sample['Audio Code'].head(10).tolist())
+                    st.write("**Rejected Audio Codes from Sample:**")
+                    rejected_codes = rejected_sample['Audio Code'].astype(str).tolist()
+                    st.write(rejected_codes[:10])  # Show first 10
+                    
+                    st.write("**Main bg_audio (extracted codes):**")
+                    main_codes = main_df['bg_audio'].apply(extract_audio_code_from_bg_audio).tolist()
+                    st.write([code for code in main_codes[:10] if code is not None])  # Show first 10
+                    
+                    st.write("**Remaining Records (first 5 bg_audio codes):**")
+                    if len(remaining_records) > 0:
+                        remaining_codes = remaining_records['bg_audio'].head().tolist()
+                        st.write(remaining_codes)
+                    else:
+                        st.write("No remaining records")
+                    
+            else:
+                st.warning("⚠️ No matching records found!")
                 
-                st.write("**Sample Rejected Audio Codes (first 10):**")
-                st.write(rejected_sample['Audio Code'].head(10).tolist())
-                
-                st.write("**Main bg_audio extracted codes (first 10):**")
-                main_codes = main_df['bg_audio'].apply(extract_audio_code_from_bg_audio).dropna().head(10).tolist()
-                st.write(main_codes)
-                
-                st.write("**Data Types Info:**")
-                st.write(f"Sample Audio Code type: {sample_df['Audio Code'].dtype}")
-                st.write(f"Main bg_audio type: {main_df['bg_audio'].dtype}")
-            
-            # Download option
-            st.subheader("💾 Download Results")
-            excel_data = convert_df_to_excel(accepted_matching, rejected_matching, remaining_records)
-            st.download_button(
-                label="📥 Download All Results as Excel",
-                data=excel_data,
-                file_name="audio_comparison_results.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-            
+                # Show some debug info
+                with st.expander("🔧 Debug Information"):
+                    st.write("**Accepted Audio Codes (first 10):**")
+                    accepted_codes = accepted_sample['Audio Code'].astype(str).tolist()
+                    st.write(accepted_codes[:10])
+                    
+                    st.write("**Rejected Audio Codes (first 10):**")
+                    rejected_codes = rejected_sample['Audio Code'].astype(str).tolist()
+                    st.write(rejected_codes[:10])
+                    
+                    st.write("**Main bg_audio extracted codes (first 10):**")
+                    main_codes = main_df['bg_audio'].apply(extract_audio_code_from_bg_audio).tolist()
+                    st.write([code for code in main_codes[:10] if code is not None])
+                    
         except Exception as e:
             st.error(f"❌ Error processing files: {str(e)}")
-            st.exception(e)  # Show full error traceback for debugging
     
     # Instructions
     st.markdown("---")
     st.subheader("📋 Instructions")
     st.markdown("""
-    1. **Sample File Requirements**:
-       - Must contain columns: `Audio Code` and `Accepted / Rejected`
-       - `Accepted / Rejected` values must be "Accepted" or "Rejected" (case insensitive)
-       - Audio codes can be numbers or strings (will be cleaned automatically)
+    1. **Sample Excel File**: Upload the Excel file containing the 'Audio Code' and 'Accepted / Rejected' columns
+       - Audio Code Format: `1745739346222` (numeric codes)
+       - Accepted / Rejected: `Accepted` or `Rejected` (case insensitive)
     
-    2. **Main File Requirements**:
-       - Must contain `bg_audio` column
-       - Can have file extensions like `.m4a`, `.mp3`, etc. (will be removed automatically)
+    2. **Main Excel File**: Upload the Excel file containing the 'bg_audio' column
+       - Format: `1746440155390.m4a` (codes with file extensions)
     
-    3. **Troubleshooting**:
-       - If no matches are found, check the "Debug Information" section
-       - Ensure audio codes in both files are compatible (same numeric values)
-       - Check for leading/trailing spaces in your data
+    3. **Process**: The tool will:
+       - Separate accepted and rejected records from sample file
+       - Extract numeric codes from bg_audio column (remove file extensions)
+       - Compare both accepted and rejected codes with main file
+       - Generate separate results for accepted, rejected, and remaining matches
+    
+    4. **Output**: Download Excel file with **three sheets**:
+       - **Accepted Matches**: All matching records for accepted audio codes
+       - **Rejected Matches**: All matching records for rejected audio codes
+       - **Rejected by Data verification**: All remaining records from main file (not in sample file)
+    
+    5. **Download**: Download the results as a single Excel file with three separate sheets
+    
+    6. **Summary**: View coverage statistics and remaining records percentage
     """)
 
 if __name__ == "__main__":
