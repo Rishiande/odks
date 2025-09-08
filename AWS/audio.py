@@ -40,7 +40,7 @@ forms = {
             "180-Pudukkottai Tracking Survey 08-2025 ODK XLSForm": {"project_id": 8, "form_id": "180-Pudukkottai Tracking Survey 08-2025 ODK XLSForm"},
             "181-Thirumayam Tracking Survey 08-2025 ODK XLSForm": {"project_id": 8, "form_id": "181-Thirumayam Tracking Survey 08-2025 ODK XLSForm"},
             "182-Alangudi Tracking Survey 08-2025 ODK XLSForm": {"project_id": 8, "form_id": "182-Alangudi Tracking Survey 08-2025 ODK XLSForm"},
-            "183-Aranthangi Tracking Survey 08-2025 ODK XLSForm": {"project_id": 8, "form_id": "183-Aranthangi racking Survey 08-2025 ODK XLSForm"}
+            "183-Aranthangi Tracking Survey 08-2025 ODK XLSForm": {"project_id": 8, "form_id": "183-Aranthangi racking Survey 08-2025 ODK XLSForm",}
         },
         "Delta Tracker Ariyalur": {
             "149-Ariyalur Tracking Survey 08-2025 ODK XLSForm": {"project_id": 9, "form_id": "149-Ariyalur Tracking Survey 08-2025 ODK XLSForm"},
@@ -81,6 +81,33 @@ forms = {
             "175-Orathanadu Tracking Survey 08-2025 ODK XLSForm": {"project_id": 7, "form_id": "175-Orathanadu Tracking Survey 08-2025 ODK XLSForm"},
             "176-Pattukkottai Tracking Survey 08-2025 ODK XLSForm": {"project_id": 7, "form_id": "176-Pattukkottai Tracking Survey 08-2025 ODK XLSForm"},
             "177-Peravurani Tracking Survey 08-2025 ODK XLSForm": {"project_id": 7, "form_id": "177-Peravurani Tracking Survey 08-2025 ODK XLSForm"}
+        },
+        "Delta Tracker Thiruchirapalli": {
+            "138-Manapparai Tracking Survey 08-2025 ODK XLSForm": {"project_id": 11, "form_id": "138-Manapparai Tracking Survey 08-2025 ODK XLSForm"},
+            "139-Srirangam Tracking Survey 08-2025 ODK XLSForm": {"project_id": 11, "form_id": "139-Srirangam Tracking Survey 08-2025 ODK XLSForm"},
+            "140-Tiruchirappalli (West) Tracking Survey 08-2025 ODK XLSForm": {"project_id": 11, "form_id": "140-Tiruchirappalli (West) Tracking Survey 08-2025 ODK XLSForm"},
+            "141-Tiruchirappalli (East) Tracking Survey 08-2025 ODK XLSForm": {"project_id": 11, "form_id": "141-Tiruchirappalli (East) Tracking Survey 08-2025 ODK XLSForm"},
+            "142-Thiruverumbur Tracking Survey 08-2025 ODK XLSForm": {"project_id": 11, "form_id": "142-Thiruverumbur Tracking Survey 08-2025 ODK XLSForm"},
+            "143-Lalgudi Tracking Survey 08-2025 ODK XLSForm": {"project_id": 11, "form_id": "143-Lalgudi Tracking Survey 08-2025 ODK XLSForm"},
+            "144-Manachanallur Tracking Survey 08-2025 ODK XLSForm": {"project_id": 11, "form_id": "144-Manachanallur Tracking Survey 08-2025 ODK XLSForm"},
+            "145-Musiri Tracking Survey 08-2025 ODK XLSForm": {"project_id": 11, "form_id": "145-Musiri Tracking Survey 08-2025 ODK XLSForm"},
+            "146-Thuraiyur (SC) Tracking Survey 08-2025 ODK XLSForm": {"project_id": 11, "form_id": "146-Thuraiyur (SC) Tracking Survey 08-2025 ODK XLSForm"}
+        },
+        "South Tracker VirudhuNagar": {
+            "202-Rajapalayam Tracking Survey 08-2025 ODK XLSForm": {"project_id": 13, "form_id": "202-Rajapalayam Tracking Survey 08-2025 ODK XLSForm"},
+            "203-Srivilliputhur (SC) Tracking Survey 08-2025 ODK XLSForm": {"project_id": 13, "form_id": "203-Srivilliputhur (SC) Tracking Survey 08-2025 ODK XLSForm"},
+            "204-Sattur Tracking Survey 08-2025 ODK XLSForm": {"project_id": 13, "form_id": "204-Sattur Tracking Survey 08-2025 ODK XLSForm"},
+            "205-Sivakasi Tracking Survey 08-2025 ODK XLSForm": {"project_id": 13, "form_id": "205-Sivakasi Tracking Survey 08-2025 ODK XLSForm"},
+            "206-Virudhunagar Tracking Survey 08-2025 ODK XLSForm": {"project_id": 13, "form_id": "206-Virudhunagar Tracking Survey 08-2025 ODK XLSForm"},
+            "207-Aruppukkottai Tracking Survey 08-2025 ODK XLSForm": {"project_id": 13, "form_id": "207-Aruppukkottai Tracking Survey 08-2025 ODK XLSForm"},
+            "208-Tiruchuli Tracking Survey 08-2025 ODK XLSForm": {"project_id": 13, "form_id": "208-Tiruchuli Tracking Survey 08-2025 ODK XLSForm"}
+        },
+        "South Tracker Tirunelveli": {
+            "224-Tirunelveli Tracking Survey 08-2025 ODK XLSForm": {"project_id": 14, "form_id": "224-Tirunelveli Tracking Survey 08-2025 ODK XLSForm"},
+            "225-Ambasamudram Tracking Survey 08-2025 ODK XLSForm": {"project_id": 14, "form_id": "225-Ambasamudram Tracking Survey 08-2025 ODK XLSForm"},
+            "226-Palayamkottai Tracking Survey 08-2025 ODK XLSForm": {"project_id": 14, "form_id": "226-Palayamkottai Tracking Survey 08-2025 ODK XLSForm"},
+            "227-Nanguneri Tracking Survey 08-2025 ODK XLSForm": {"project_id": 14, "form_id": "227-Nanguneri Tracking Survey 08-2025 ODK XLSForm"},
+            "228-Radhapuram Tracking Survey 08-2025 ODK XLSForm": {"project_id": 14, "form_id": "228-Radhapuram Tracking Survey 08-2025 ODK XLSForm"}
         }
     }
 }
@@ -135,6 +162,7 @@ def download_audio_files(selected_server, form_name, project_id, form_id, audio_
     config = ODK_CONFIGS[selected_server]
     zip_buffer = io.BytesIO()
     download_status = []
+    successful_downloads = 0
 
     try:
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
@@ -155,7 +183,7 @@ def download_audio_files(selected_server, form_name, project_id, form_id, audio_
 
                         clean_name = f"{submitted_by}_{audio_file}".replace(" ", "_").replace("/", "_").replace("\\", "_")
                         zip_file.writestr(clean_name, audio_response.content)
-
+                        successful_downloads += 1
                         download_status.append(f"✅ Downloaded: {clean_name}")
 
                     except requests.exceptions.RequestException as e:
@@ -164,7 +192,7 @@ def download_audio_files(selected_server, form_name, project_id, form_id, audio_
                         download_status.append(f"❌ Unexpected error for {audio_file}: {str(e)}")
 
         # Check if zip has content before returning
-        if zip_buffer.tell() == 0:
+        if successful_downloads == 0:
             zip_buffer.close()
             return None, download_status
 
@@ -193,6 +221,7 @@ def create_combined_zip(audio_files_data, server_name, date_suffix):
     """Create a combined ZIP file from multiple form audio files"""
     zip_buffer_all = io.BytesIO()
     download_status_all = []
+    total_files_added = 0
     
     try:
         with zipfile.ZipFile(zip_buffer_all, "w", zipfile.ZIP_DEFLATED) as zip_file_all:
@@ -207,6 +236,7 @@ def create_combined_zip(audio_files_data, server_name, date_suffix):
                                 # Create nested folder structure
                                 nested_path = f"{project_name.replace(' ', '_')}/{form_name.replace(' ', '_')}/{file_info}"
                                 zip_file_all.writestr(nested_path, file_content)
+                                total_files_added += 1
                     except zipfile.BadZipFile:
                         st.warning(f"Skipping corrupted zip data for {project_name}/{form_name}")
                     except Exception as e:
@@ -218,7 +248,7 @@ def create_combined_zip(audio_files_data, server_name, date_suffix):
                 download_status_all.extend(status_list)
         
         # Check if the combined zip has content
-        if zip_buffer_all.tell() == 0:
+        if total_files_added == 0:
             zip_buffer_all.close()
             return None, download_status_all
         
@@ -292,7 +322,7 @@ def main():
 
                                             if zip_data:
                                                 audio_files_data.append((project_name, form_name, zip_data, download_status))
-                                                st.success(f"✅ Processed {form_name} in {project_name} - {len(audio_submissions)} audio files")
+                                                st.success(f"✅ Processed {form_name} in {project_name} - {len(audio_submissions)} audio files found, {len([s for s in download_status if '✅' in s])} downloaded")
                                             else:
                                                 st.warning(f"⚠️ No files downloaded for {form_name} in {project_name}")
                                                 audio_files_data.append((project_name, form_name, None, download_status))
@@ -364,7 +394,7 @@ def main():
 
                                                 if zip_data:
                                                     audio_files_data.append((project_name, form_name, zip_data, download_status))
-                                                    st.success(f"✅ Processed {form_name} in {project_name} - {len(audio_submissions)} audio files")
+                                                    st.success(f"✅ Processed {form_name} in {project_name} - {len(audio_submissions)} audio files found, {len([s for s in download_status if '✅' in s])} downloaded")
                                                 else:
                                                     st.warning(f"⚠️ No files downloaded for {form_name} in {project_name}")
                                                     audio_files_data.append((project_name, form_name, None, download_status))
@@ -441,7 +471,7 @@ def main():
 
                                             if zip_data:
                                                 audio_files_data.append((selected_project, form_name, zip_data, download_status))
-                                                st.success(f"✅ Processed {form_name} in {selected_project} - {len(audio_submissions)} audio files")
+                                                st.success(f"✅ Processed {form_name} in {selected_project} - {len(audio_submissions)} audio files found, {len([s for s in download_status if '✅' in s])} downloaded")
                                             else:
                                                 st.warning(f"⚠️ No files downloaded for {form_name} in {selected_project}")
                                                 audio_files_data.append((selected_project, form_name, None, download_status))
@@ -532,7 +562,7 @@ def main():
 
                                         if zip_data:
                                             audio_files_data.append((project_name, form_name, zip_data, download_status))
-                                            st.success(f"✅ Processed {form_name} in {project_name} - {len(audio_submissions)} audio files")
+                                            st.success(f"✅ Processed {form_name} in {project_name} - {len(audio_submissions)} audio files found, {len([s for s in download_status if '✅' in s])} downloaded")
                                         else:
                                             st.warning(f"⚠️ No files downloaded for {form_name} in {project_name}")
                                             audio_files_data.append((project_name, form_name, None, download_status))
@@ -618,7 +648,8 @@ def main():
                                 if zip_data is None:
                                     st.error("No files were downloaded. Check the status messages below.")
                                 else:
-                                    st.success(f"🎉 Download completed for {form_name} in {project_name}!")
+                                    successful_downloads = len([s for s in download_status if '✅' in s])
+                                    st.success(f"🎉 Download completed for {form_name} in {project_name}! {successful_downloads}/{len(audio_submissions)} files downloaded")
                                     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                                     file_name = f"{project_name.replace(' ', '_')}_{form_name.replace(' ', '_')}_AUDIOS_{timestamp}{date_suffix}.zip"
                                     
@@ -639,4 +670,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
